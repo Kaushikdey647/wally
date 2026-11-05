@@ -22,6 +22,8 @@ markdown_extensions:
   - tables
   - toc: { permalink: true }
   - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
   - pymdownx.highlight
   - pymdownx.superfences:
       custom_fences:
@@ -33,9 +35,16 @@ extra:
   version:
     provider: mike
 
+validation:
+  anchors: warn
+
 nav:
   - Home: index.md
+  - Start here:
+      - How Wally works: how-it-works.md
+      - Glossary: glossary.md
   - Concepts: concepts.md
+  - Record layout: record-layout.md
   - Design:
       - Blueprint: design/blueprint.md
       - File format: format.md
