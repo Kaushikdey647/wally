@@ -1099,8 +1099,11 @@
 <li><code>producerMode(SINGLE | MULTI)</code>. Single mode uses a plain store.</li>
 <li>jcstress (commit visibility, no torn header/payload) and Lincheck (MPSC append + tailer).</li>
 <li>JMH NP1C (N = 1, 2, 4, 8) with HdrHistogram and a fixed-rate driver.</li>
+<li><strong>Competitor benchmarks</strong> (moved from M6): JCTools MPSC, Chronicle Queue</li>
+<li>Adds ~4 days to M2 but provides essential context for multi-producer results</li>
+<li>See issue #4 for full benchmarking plan</li>
 </ul>
-<p><strong>Exit:</strong> no forbidden jcstress outcomes; Lincheck passes; still zero allocation.</p>
+<p><strong>Exit:</strong> no forbidden jcstress outcomes; Lincheck passes; still zero allocation; competitor benchmarks complete.</p>
 <h2 id="m3-durability-crash-recovery">M3: durability + crash recovery<a class="headerlink" href="#m3-durability-crash-recovery" title="Permanent link">&para;</a></h2>
 <ul>
 <li><code>FlushPolicy.none() | periodic(Duration) | sync()</code>. Periodic = flusher agent <code>force()</code>s dirty ranges (group commit).</li>
