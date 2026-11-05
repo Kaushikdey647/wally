@@ -149,3 +149,71 @@ Allow smaller segments in test mode (e.g., via a `@VisibleForTesting` relaxed co
 4. Verify fix with 200-record test and the original `WallyIntegrationTest`
 5. Complete remaining M1 tasks (preallocator, checksums, property test, docs)
 6. Update this ADR's status to Accepted once the fix is verified
+
+---
+
+## Update 2026-11-05 (later)
+
+### Additional fix applied: Appender rollover position calculation
+
+**Bug identified from test output:**
+```
+Writing 200 records...
+  Record 0 at position 0
+  Record 50 at position 0    <- Every new segment showed position 0!
+  Record 100 at position 0
+  Record 150 at position 0
+```
+
+**Root cause:**
+In `Appender.roll()`:
+```java
+writer.padToEnd();                      // fills rest of current segment
+long nextPosition = writer.tailPosition();  // WRONG: still in old segment!
+current = manager.acquire(nextPosition);    // rounds down to same segment index
+```
+
+After `padToEnd()`, `tailPosition()` returns a position still inside the old segment (e.g., 4000 for a 4096-byte segment). When `SegmentManager.acquire()` divides this by `segmentSize`, it gets index 0 again instead of index 1.
+
+**Fix:**
+```java
+long nextSegmentIndex = manager.rollToNext();
+long nextPosition = nextSegmentIndex * manager.segmentSize();
+current = manager.acquire(nextPosition);
+```
+
+This ensures we always acquire the next segment by its index, not by trying to derive the index from the old segment's tail position.
+
+**Result:** Positions now increment correctly across segments (verified in test output).
+
+---
+
+### Remaining issue: Tailer still stops at segment boundaries
+
+Even with correct positions, `ActualMultiSegmentTest` reads only 50 out of 200 records - it stops at the end of segment 0.
+
+The problem is in `Tailer.poll()` rollover logic. More debugging needed to determine exact condition for "roll to next segment vs. wait for more records."
+
+### Reopen issue discovered
+
+`reopensLogAndContinuesReading()` fails because when `Wally` reopens, the `Appender` starts writing at position 0, overwriting existing data.
+
+**Missing:** Tail recovery on open. Options:
+1. Scan all segments to find the actual tail (like recovery does for readers)
+2. Store tail position in a metadata file
+3. Make appender read-only on reopen (WAL mode only appends in one session)
+
+Deferred to post-M1.
+
+---
+
+## Status summary (2026-11-05 end of session)
+
+| Issue | Status |
+|---|---|
+| Pre-sliced buffer offset confusion | ✅ FIXED |
+| Class name typo | ✅ FIXED |
+| Appender rollover position calculation | ✅ FIXED |
+| Tailer stops at segment boundaries | 🚧 IN PROGRESS - needs more debugging |
+| Reopen overwrites existing data | 📋 DOCUMENTED - deferred to post-M1 |
+
