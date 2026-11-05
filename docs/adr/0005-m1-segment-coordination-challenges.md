@@ -217,3 +217,42 @@ Deferred to post-M1.
 | Tailer stops at segment boundaries | 🚧 IN PROGRESS - needs more debugging |
 | Reopen overwrites existing data | 📋 DOCUMENTED - deferred to post-M1 |
 
+
+---
+
+## RESOLVED: Tailer segment rollover (2026-11-05 final session)
+
+**Root cause identified:**
+Same pattern as the Appender bug! `Tailer.rollToNextSegment()` was calling:
+```java
+long nextPosition = reader.position();  // e.g., 4032
+current = manager.acquire(nextPosition); // 4032 / 4096 = 0 (same segment!)
+```
+
+When the reader reached the end of segment 0 at position 4032, dividing by 4096 gave index 0, so we re-acquired segment 0 instead of moving to segment 1.
+
+**Fix:**
+```java
+long currentSegmentIndex = currentPosition / manager.segmentSize();
+long nextSegmentIndex = currentSegmentIndex + 1;
+long nextSegmentStart = nextSegmentIndex * manager.segmentSize();
+current = manager.acquire(nextSegmentStart);
+reader.wrap(current.data, 0, current.file.basePosition());
+```
+
+**Result:** `./gradlew :wally-core:check` now **PASSES**! Multi-segment reading works correctly.
+
+---
+
+## Final status (2026-11-05)
+
+| Issue | Status |
+|---|---|
+| Pre-sliced buffer offset confusion | ✅ FIXED |
+| Class name typo | ✅ FIXED |
+| Appender rollover position calculation | ✅ FIXED |
+| **Tailer rollover stops at segment boundaries** | ✅ **FIXED** |
+| Reopen overwrites existing data | 📋 DEFERRED (tail recovery = complex feature) |
+
+**M1 core functionality working:** Multi-segment reads and writes across arbitrary record counts!
+
