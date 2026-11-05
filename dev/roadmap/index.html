@@ -290,6 +290,121 @@
   
   
   
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Start here
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Start here
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-it-works/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How Wally works
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../concepts/" class="md-nav__link">
         
@@ -299,6 +414,33 @@
     
   
     Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../record-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Record layout
   
 
     
@@ -331,10 +473,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
             
   
   
@@ -352,8 +494,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -524,7 +666,7 @@
   <a href="#m0-memory-layer-in-memory-log" class="md-nav__link">
     <span class="md-ellipsis">
       
-        M0: memory layer + in-memory log
+        M0: memory layer + in-memory log ✅
       
     </span>
   </a>
@@ -652,10 +794,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
             
   
   
@@ -673,8 +815,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -833,7 +975,7 @@
   <a href="#m0-memory-layer-in-memory-log" class="md-nav__link">
     <span class="md-ellipsis">
       
-        M0: memory layer + in-memory log
+        M0: memory layer + in-memory log ✅
       
     </span>
   </a>
@@ -930,15 +1072,15 @@
 <p><strong>Target:</strong> JDK 25 LTS (final FFM API), Gradle Kotlin DSL, zero runtime dependencies in <code>wally-core</code>.</p>
 <pre class="mermaid"><code>flowchart LR
   M0[M0 memory layer] --&gt; M1[M1 mmap segments] --&gt; M2[M2 MPSC] --&gt; M3[M3 durability + recovery] --&gt; M4[M4 consumer groups + retention]</code></pre>
-<h2 id="m0-memory-layer-in-memory-log">M0: memory layer + in-memory log<a class="headerlink" href="#m0-memory-layer-in-memory-log" title="Permanent link">&para;</a></h2>
+<h2 id="m0-memory-layer-in-memory-log">M0: memory layer + in-memory log ✅<a class="headerlink" href="#m0-memory-layer-in-memory-log" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>Mem</code> (static aligned <code>VarHandle</code>s: plain, acquire/release, getAndAdd, CAS) and <code>PaddedCounter</code> (value isolated by 128 B padding).</li>
-<li><code>RecordFormat</code>: <code>int length | short type | short flags | int crc | int reserved</code> (16 B header, 8 B alignment). <code>length == 0</code> means uncommitted. <code>TYPE_PADDING</code> fills the end of a segment.</li>
-<li>Single-writer append/poll over one <code>Arena.ofShared().allocate(size, 4096)</code> segment.</li>
+<li><code>Mem</code> (static aligned <code>VarHandle</code>s: acquire/release, volatile, getAndAdd, CAS) and <code>Align</code>.</li>
+<li><code>RecordFormat</code>: <code>int frameLength | short type | short flags | int crc | int reserved</code> (16 B header, 8 B alignment). <code>frameLength == 0</code> means uncommitted. <code>TYPE_PADDING</code> fills the end of a segment and replaces aborted claims.</li>
+<li><code>SegmentWriter</code> (single writer; doubles as the <code>Claim</code> flyweight) and <code>SegmentReader</code> over one off-heap segment.</li>
 <li>Read API: <code>RecordHandler.onRecord(MemorySegment seg, long offset, int length, long position)</code>, so there are no slices.</li>
-<li>JMH 1P1C vs <code>ArrayBlockingQueue</code> (payloads 32 B, 256 B, 4 KB).</li>
+<li>JMH single-thread append + read vs <code>ArrayBlockingQueue</code> (payloads 32 B, 256 B, 4 KB). Cross-thread benchmarks moved to M2, since a single fixed segment can't sustain a long 1P1C run.</li>
 </ul>
-<p><strong>Exit:</strong> unit tests pass; JMH <code>-prof gc</code> shows <code>gc.alloc.rate.norm ≈ 0</code>; Epsilon GC test passes (<code>-XX:+UseEpsilonGC -Xmx64m</code>, 50M records).</p>
+<p><strong>Exit (met):</strong> unit tests pass, including a cross-thread ordering test; JMH <code>-prof gc</code> shows <code>gc.alloc.rate.norm ≈ 10⁻⁴ B/op</code>; <code>ThreadMXBean</code> check shows &lt; 1 KB over 1M records; Epsilon GC test passes (<code>-Xmx128m</code>, 50M records).</p>
 <h2 id="m1-mmapd-segments-single-writer">M1: mmap'd segments, single writer<a class="headerlink" href="#m1-mmapd-segments-single-writer" title="Permanent link">&para;</a></h2>
 <ul>
 <li>64 B segment header: magic <code>WALLY\0</code>, format version, segment size, base position, header CRC.</li>
@@ -951,6 +1093,7 @@
 <p><strong>Exit:</strong> jqwik model test (random append/poll/reopen/segment sizes vs <code>ArrayList</code> oracle) passes; rollover tested at exact boundaries; <a href="../format/">File format</a> written.</p>
 <h2 id="m2-multi-producer-claimcommit">M2: multi-producer claim/commit<a class="headerlink" href="#m2-multi-producer-claimcommit" title="Permanent link">&para;</a></h2>
 <ul>
+<li><code>PaddedCounter</code> (value isolated by 128 B padding) for the shared tail.</li>
 <li>Tail claim with <code>getAndAdd</code> (<a href="../adr/0004-fetch-add-tail/">ADR 0004</a>). The claimant whose range covers the end of a segment writes padding and triggers the roll; claimants landing past the end retry.</li>
 <li>Commit: payload first, then <code>setRelease(length)</code>. Reader: <code>getAcquire(length)</code> (<a href="../adr/0003-claim-commit-protocol/">ADR 0003</a>).</li>
 <li><code>producerMode(SINGLE | MULTI)</code>. Single mode uses a plain store.</li>

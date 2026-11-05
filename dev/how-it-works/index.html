@@ -1,0 +1,1596 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="High-throughput, zero-allocation off-heap hybrid WAL & event queue for Java">
+      
+      
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../glossary/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>How Wally works - Wally</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#how-wally-works-and-the-java-behind-it" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Wally" class="md-header__button md-logo" aria-label="Wally" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Wally
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              How Wally works
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/kaushikdey647/wally" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Wally" class="md-nav__button md-logo" aria-label="Wally" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Wally
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/kaushikdey647/wally" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Start here
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Start here
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How Wally works
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How Wally works
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-wally-will-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Wally will do
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-life-of-a-record" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The life of a record
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#java-concepts-and-how-wally-uses-them" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Java concepts, and how Wally uses them
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Java concepts, and how Wally uses them">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-the-heap-objects-and-garbage-collection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. The heap, objects and garbage collection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-off-heap-memory-arena-and-memorysegment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Off-heap memory: Arena and MemorySegment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-memory-mapped-files-coming-in-m1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Memory-mapped files (coming in M1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-threads-and-the-java-memory-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Threads and the Java Memory Model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-varhandle-ordered-and-atomic-memory-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. VarHandle: ordered and atomic memory access
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-interfaces-and-lambdas-without-allocation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Interfaces and lambdas, without allocation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-the-flyweight-pattern-reusing-one-object" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. The flyweight pattern: reusing one object
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-return-codes-instead-of-exceptions-on-the-hot-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Return codes instead of exceptions on the hot path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-try-finally-for-consistent-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. try / finally for consistent state
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-java-modules-module-infojava" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Java modules (module-info.java)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-proving-it-measuring-allocation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Proving it: measuring allocation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#code-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Code map
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../record-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Record layout
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/blueprint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Blueprint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guarantees/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guarantees
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADRs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ADRs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0001-ffm-over-unsafe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0001 FFM over Unsafe
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0002-position-addressing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0002 Position addressing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0003-claim-commit-protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0003 Claim/commit protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0004-fetch-add-tail/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0004 Fetch-add tail
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-wally-will-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Wally will do
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-life-of-a-record" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The life of a record
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#java-concepts-and-how-wally-uses-them" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Java concepts, and how Wally uses them
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Java concepts, and how Wally uses them">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-the-heap-objects-and-garbage-collection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. The heap, objects and garbage collection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-off-heap-memory-arena-and-memorysegment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Off-heap memory: Arena and MemorySegment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-memory-mapped-files-coming-in-m1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Memory-mapped files (coming in M1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-threads-and-the-java-memory-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Threads and the Java Memory Model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-varhandle-ordered-and-atomic-memory-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. VarHandle: ordered and atomic memory access
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-interfaces-and-lambdas-without-allocation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Interfaces and lambdas, without allocation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-the-flyweight-pattern-reusing-one-object" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. The flyweight pattern: reusing one object
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-return-codes-instead-of-exceptions-on-the-hot-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Return codes instead of exceptions on the hot path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-try-finally-for-consistent-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. try / finally for consistent state
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-java-modules-module-infojava" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Java modules (module-info.java)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-proving-it-measuring-allocation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Proving it: measuring allocation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#code-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Code map
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="how-wally-works-and-the-java-behind-it">How Wally works (and the Java behind it)<a class="headerlink" href="#how-wally-works-and-the-java-behind-it" title="Permanent link">&para;</a></h1>
+<p>This page explains what Wally will do, follows one record from start to finish, then goes through each Java concept Wally relies on and shows where it appears in the real code.</p>
+<p>If a word is unfamiliar, check the <a href="../glossary/">Glossary</a>.</p>
+<h2 id="what-wally-will-do">What Wally will do<a class="headerlink" href="#what-wally-will-do" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>What it means for you</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Append records</td>
+<td>Write chunks of bytes to the end of the log, from one or many threads</td>
+<td>✅ single segment, single writer (M0)</td>
+</tr>
+<tr>
+<td>Zero-copy writes</td>
+<td>Reserve space and write directly into the log</td>
+<td>✅ (M0)</td>
+</tr>
+<tr>
+<td>Read records in order</td>
+<td>Get every record, in order, through a callback</td>
+<td>✅ (M0)</td>
+</tr>
+<tr>
+<td>No GC pressure</td>
+<td>No objects created per record once warmed up</td>
+<td>✅ proven (M0)</td>
+</tr>
+<tr>
+<td>Store in files</td>
+<td>Records live in memory-mapped segment files; the log grows across files</td>
+<td>M1</td>
+</tr>
+<tr>
+<td>Checksums</td>
+<td>Detect corrupted records</td>
+<td>M1</td>
+</tr>
+<tr>
+<td>Many producers</td>
+<td>Several threads append at once without locks</td>
+<td>M2</td>
+</tr>
+<tr>
+<td>Durability control</td>
+<td>Choose how often data is forced to disk</td>
+<td>M3</td>
+</tr>
+<tr>
+<td>Crash recovery</td>
+<td>Restart after a crash with a correct, uncorrupted log</td>
+<td>M3</td>
+</tr>
+<tr>
+<td>Named consumers</td>
+<td>Readers that remember their place across restarts</td>
+<td>M4</td>
+</tr>
+<tr>
+<td>Automatic cleanup</td>
+<td>Delete old files once everyone has read them</td>
+<td>M4</td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-life-of-a-record">The life of a record<a class="headerlink" href="#the-life-of-a-record" title="Permanent link">&para;</a></h2>
+<pre class="mermaid"><code>sequenceDiagram
+    participant P as Producer thread
+    participant L as Log memory (segment)
+    participant C as Consumer thread
+    P-&gt;&gt;L: 1. Claim 40 bytes at the tail (length field still 0)
+    P-&gt;&gt;L: 2. Write header type + payload bytes
+    C-&gt;&gt;L: reads length = 0 → "not ready", waits
+    P-&gt;&gt;L: 3. Commit: write length = 40 (release)
+    C-&gt;&gt;L: reads length = 40 (acquire) → whole record is visible
+    C-&gt;&gt;C: 4. Calls your handler with (buffer, offset, length, position)</code></pre>
+<ol>
+<li><strong>Claim.</strong> The producer reserves space at the end of the log. Nobody else can get that space.</li>
+<li><strong>Write.</strong> The producer fills in the record: either Wally copies your bytes in, or you write them yourself (zero-copy).</li>
+<li><strong>Commit.</strong> The producer writes the record's length last. This single write is what makes the record "exist" for readers.</li>
+<li><strong>Read.</strong> The consumer sees a non-zero length, reads the record, and moves on to the next one, which starts at the next multiple of 8 bytes.</li>
+</ol>
+<p>Here is how a record is laid out in memory:</p>
+<div class="highlight"><pre><span></span><code>byte:  0         4        6        8         12        16
+       ┌─────────┬────────┬────────┬─────────┬─────────┬───────────────┬───────┐
+       │ length  │ type   │ flags  │ crc32c  │reserved │ payload       │ pad   │
+       │ int     │ short  │ short  │ int     │ int     │ (your bytes)  │ 0–7 B │
+       └─────────┴────────┴────────┴─────────┴─────────┴───────────────┴───────┘
+       ◄──────────────── 16-byte header ──────────────►
+</code></pre></div>
+<h2 id="java-concepts-and-how-wally-uses-them">Java concepts, and how Wally uses them<a class="headerlink" href="#java-concepts-and-how-wally-uses-them" title="Permanent link">&para;</a></h2>
+<h3 id="1-the-heap-objects-and-garbage-collection">1. The heap, objects and garbage collection<a class="headerlink" href="#1-the-heap-objects-and-garbage-collection" title="Permanent link">&para;</a></h3>
+<p><strong>The concept.</strong> In Java, <code>new Order()</code> creates an object on the <strong>heap</strong>. You never free it yourself. When nothing refers to it anymore, the <strong>garbage collector (GC)</strong> reclaims the memory. That's convenient, but the GC has to find and clean up dead objects, and parts of that work can pause your program.</p>
+<p><strong>Why it matters for Wally.</strong> A typical queue creates at least one object per message. At 10 million messages per second, that's 10 million objects per second for the GC to deal with.</p>
+<p><strong>What Wally does.</strong> It keeps record data <em>outside</em> the heap and creates no objects per record. The <a href="../benchmarks/">benchmarks</a> show the difference: <code>ArrayBlockingQueue</code> allocates 48 bytes per 32-byte message; Wally allocates about 0.</p>
+<h3 id="2-off-heap-memory-arena-and-memorysegment">2. Off-heap memory: <code>Arena</code> and <code>MemorySegment</code><a class="headerlink" href="#2-off-heap-memory-arena-and-memorysegment" title="Permanent link">&para;</a></h3>
+<p><strong>The concept.</strong> Java's <a href="../glossary/#ffm-api-foreign-function-memory-api">FFM API</a> (final in Java 22) lets you work with raw memory safely:</p>
+<ul>
+<li>An <strong><code>Arena</code></strong> owns some memory and decides when it's freed.</li>
+<li>A <strong><code>MemorySegment</code></strong> is a handle to that memory. It knows its size, so reading past the end throws an exception instead of corrupting memory.</li>
+<li>A <strong><code>ValueLayout</code></strong> (<code>JAVA_INT</code>, <code>JAVA_LONG</code>, <code>JAVA_SHORT</code>...) says how to read or write a value at an offset.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="n">MemorySegment</span><span class="w"> </span><span class="n">buffer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Arena</span><span class="p">.</span><span class="na">ofAuto</span><span class="p">().</span><span class="na">allocate</span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">4096</span><span class="p">);</span><span class="w">  </span><span class="c1">// 1 MB, page-aligned, zero-filled</span>
+<span class="n">buffer</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">ValueLayout</span><span class="p">.</span><span class="na">JAVA_LONG</span><span class="p">,</span><span class="w"> </span><span class="mi">16</span><span class="p">,</span><span class="w"> </span><span class="mi">42L</span><span class="p">);</span><span class="w">                     </span><span class="c1">// write a long at byte 16</span>
+<span class="kt">long</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">buffer</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">ValueLayout</span><span class="p">.</span><span class="na">JAVA_LONG</span><span class="p">,</span><span class="w"> </span><span class="mi">16</span><span class="p">);</span><span class="w">             </span><span class="c1">// read it back</span>
+</code></pre></div>
+<p><strong>In Wally.</strong> <code>SegmentWriter</code> and <code>SegmentReader</code> work entirely on a <code>MemorySegment</code>. For example, writing the record type in <code>SegmentWriter.tryClaim</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="n">buffer</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">ValueLayout</span><span class="p">.</span><span class="na">JAVA_SHORT</span><span class="p">,</span><span class="w"> </span><span class="n">offset</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">TYPE_OFFSET</span><span class="p">,</span><span class="w"> </span><span class="n">RecordFormat</span><span class="p">.</span><span class="na">TYPE_DATA</span><span class="p">);</span>
+</code></pre></div>
+<p>Before the FFM API, libraries like this used <code>sun.misc.Unsafe</code>, an internal class that was never officially supported and is now being removed. See <a href="../adr/0001-ffm-over-unsafe/">ADR 0001</a>.</p>
+<h3 id="3-memory-mapped-files-coming-in-m1">3. Memory-mapped files (coming in M1)<a class="headerlink" href="#3-memory-mapped-files-coming-in-m1" title="Permanent link">&para;</a></h3>
+<p><strong>The concept.</strong> <code>FileChannel.map(...)</code> asks the operating system to make a file appear as memory. Writing to the returned <code>MemorySegment</code> writes to the file. The OS moves data to disk in the background, and <code>segment.force()</code> makes it happen right now.</p>
+<div class="highlight"><pre><span></span><code><span class="k">try</span><span class="w"> </span><span class="p">(</span><span class="n">FileChannel</span><span class="w"> </span><span class="n">channel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">FileChannel</span><span class="p">.</span><span class="na">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="w"> </span><span class="n">READ</span><span class="p">,</span><span class="w"> </span><span class="n">WRITE</span><span class="p">,</span><span class="w"> </span><span class="n">CREATE</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">MemorySegment</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">channel</span><span class="p">.</span><span class="na">map</span><span class="p">(</span><span class="n">FileChannel</span><span class="p">.</span><span class="na">MapMode</span><span class="p">.</span><span class="na">READ_WRITE</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="n">arena</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// file is now a MemorySegment backed by the file on disk</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>In Wally.</strong> The same <code>SegmentWriter</code> and <code>SegmentReader</code> code works unchanged on a mapped file, because both are just <code>MemorySegment</code>s. Closing the arena unmaps the file immediately. The older <code>MappedByteBuffer</code> API had no way to do that.</p>
+<h3 id="4-threads-and-the-java-memory-model">4. Threads and the Java Memory Model<a class="headerlink" href="#4-threads-and-the-java-memory-model" title="Permanent link">&para;</a></h3>
+<p><strong>The concept.</strong> A <strong>thread</strong> is an independent path of execution. Threads share memory, which creates a surprising problem: to go faster, the CPU and the compiler may <em>reorder</em> memory writes. If thread A writes the payload and then the length, thread B might see the new length before the payload.</p>
+<p>The <strong>Java Memory Model</strong> defines when one thread is guaranteed to see another's writes. The key idea is <strong>happens-before</strong>: if thread A does a <em>release</em> write and thread B sees it with an <em>acquire</em> read, everything A wrote before the release is visible to B.</p>
+<p><strong>In Wally.</strong> This is exactly the "write the record, then sign it" rule. Commit is a release write of the length (<code>RecordFormat.publish</code>):</p>
+<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">publish</span><span class="p">(</span><span class="n">MemorySegment</span><span class="w"> </span><span class="n">buffer</span><span class="p">,</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">frameOffset</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">frameLength</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Mem</span><span class="p">.</span><span class="na">setIntRelease</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span><span class="w"> </span><span class="n">frameOffset</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">FRAME_LENGTH_OFFSET</span><span class="p">,</span><span class="w"> </span><span class="n">frameLength</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>And the reader starts every record with an acquire read (<code>SegmentReader.read</code>):</p>
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">frameLength</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Mem</span><span class="p">.</span><span class="na">getIntAcquire</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span><span class="w"> </span><span class="n">offset</span><span class="p">);</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">frameLength</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">break</span><span class="p">;</span><span class="w">   </span><span class="c1">// not committed yet: stop here and try again later</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>The test <code>readerOnOtherThreadSeesEveryRecordInOrder</code> writes 1 million records on one thread and checks that another thread reads every one, in order.</p>
+<h3 id="5-varhandle-ordered-and-atomic-memory-access">5. <code>VarHandle</code>: ordered and atomic memory access<a class="headerlink" href="#5-varhandle-ordered-and-atomic-memory-access" title="Permanent link">&para;</a></h3>
+<p><strong>The concept.</strong> A <code>VarHandle</code> is Java's tool for reading and writing memory with special rules: plain, acquire, release, volatile, or atomic operations like <code>getAndAdd</code> and <code>compareAndSet</code>. The FFM API can give you a <code>VarHandle</code> for any <code>ValueLayout</code>.</p>
+<p><strong>In Wally.</strong> The <code>Mem</code> class keeps one <code>VarHandle</code> per type and wraps it in clearly named methods:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">VarHandle</span><span class="w"> </span><span class="n">INT</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ValueLayout</span><span class="p">.</span><span class="na">JAVA_INT</span><span class="p">.</span><span class="na">varHandle</span><span class="p">();</span>
+
+<span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">getIntAcquire</span><span class="p">(</span><span class="n">MemorySegment</span><span class="w"> </span><span class="n">segment</span><span class="p">,</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">offset</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="n">INT</span><span class="p">.</span><span class="na">getAcquire</span><span class="p">(</span><span class="n">segment</span><span class="p">,</span><span class="w"> </span><span class="n">offset</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="nf">getAndAddLong</span><span class="p">(</span><span class="n">MemorySegment</span><span class="w"> </span><span class="n">segment</span><span class="p">,</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">offset</span><span class="p">,</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">delta</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="p">(</span><span class="kt">long</span><span class="p">)</span><span class="w"> </span><span class="n">LONG</span><span class="p">.</span><span class="na">getAndAdd</span><span class="p">(</span><span class="n">segment</span><span class="p">,</span><span class="w"> </span><span class="n">offset</span><span class="p">,</span><span class="w"> </span><span class="n">delta</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><code>getAndAddLong</code> will hand out space to multiple producers in M2. It's the "deli counter ticket" from the home page: each producer adds its record size to the tail and gets back where its own slot starts, in a single CPU instruction, with no lock.</p>
+<div class="admonition note">
+<p class="admonition-title">Why <code>(int)</code> casts?</p>
+<p><code>VarHandle</code> methods are <em>signature polymorphic</em>: the JVM uses the exact argument and return types you write to pick a fast path. The cast tells it the return type, and <code>static final</code> lets the JIT compiler turn the call into a single machine instruction.</p>
+</div>
+<h3 id="6-interfaces-and-lambdas-without-allocation">6. Interfaces and lambdas, without allocation<a class="headerlink" href="#6-interfaces-and-lambdas-without-allocation" title="Permanent link">&para;</a></h3>
+<p><strong>The concept.</strong> An <strong>interface</strong> declares methods without implementing them. A <strong>functional interface</strong> has exactly one method, so you can pass a <strong>lambda</strong> (a short inline function) wherever one is expected.</p>
+<p><strong>In Wally.</strong> Reading uses a callback, so Wally never has to create an object per record to hand it to you:</p>
+<div class="highlight"><pre><span></span><code><span class="nd">@FunctionalInterface</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">interface</span> <span class="nc">RecordHandler</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">onRecord</span><span class="p">(</span><span class="n">MemorySegment</span><span class="w"> </span><span class="n">buffer</span><span class="p">,</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">offset</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">length</span><span class="p">,</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">position</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="n">reader</span><span class="p">.</span><span class="na">read</span><span class="p">((</span><span class="n">buffer</span><span class="p">,</span><span class="w"> </span><span class="n">offset</span><span class="p">,</span><span class="w"> </span><span class="n">length</span><span class="p">,</span><span class="w"> </span><span class="n">position</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="n">orderId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">buffer</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">ValueLayout</span><span class="p">.</span><span class="na">JAVA_LONG</span><span class="p">,</span><span class="w"> </span><span class="n">offset</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="p">},</span><span class="w"> </span><span class="mi">100</span><span class="p">);</span>
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Lambdas can allocate</p>
+<p>A lambda that uses local variables from around it (a <em>capturing</em> lambda) may create a new object every time that line runs. To stay zero-allocation, create your handler once and reuse it, or make your class implement <code>RecordHandler</code>, as the test helper <code>AllocationLoop</code> does.</p>
+</div>
+<h3 id="7-the-flyweight-pattern-reusing-one-object">7. The flyweight pattern: reusing one object<a class="headerlink" href="#7-the-flyweight-pattern-reusing-one-object" title="Permanent link">&para;</a></h3>
+<p><strong>The concept.</strong> Instead of creating an object for every piece of data, keep one object and point it at different data each time.</p>
+<p><strong>In Wally.</strong> <code>SegmentWriter</code> itself implements the <code>Claim</code> interface. After <code>tryClaim</code>, the same writer object describes the claimed space:</p>
+<div class="highlight"><pre><span></span><code><span class="kt">long</span><span class="w"> </span><span class="n">position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">writer</span><span class="p">.</span><span class="na">tryClaim</span><span class="p">(</span><span class="mi">8</span><span class="p">);</span>
+<span class="n">writer</span><span class="p">.</span><span class="na">buffer</span><span class="p">().</span><span class="na">set</span><span class="p">(</span><span class="n">ValueLayout</span><span class="p">.</span><span class="na">JAVA_LONG</span><span class="p">,</span><span class="w"> </span><span class="n">writer</span><span class="p">.</span><span class="na">offset</span><span class="p">(),</span><span class="w"> </span><span class="mi">42L</span><span class="p">);</span><span class="w">  </span><span class="c1">// write directly into the log</span>
+<span class="n">writer</span><span class="p">.</span><span class="na">commit</span><span class="p">();</span>
+</code></pre></div>
+<p>One object serves every record, so there is nothing for the GC to collect.</p>
+<h3 id="8-return-codes-instead-of-exceptions-on-the-hot-path">8. Return codes instead of exceptions on the hot path<a class="headerlink" href="#8-return-codes-instead-of-exceptions-on-the-hot-path" title="Permanent link">&para;</a></h3>
+<p><strong>The concept.</strong> Java exceptions are great for real errors, but creating one captures a stack trace, which allocates memory and is slow.</p>
+<p><strong>In Wally.</strong> An expected situation, like "the segment is full", is reported with a return value:</p>
+<div class="highlight"><pre><span></span><code><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">writer</span><span class="p">.</span><span class="na">append</span><span class="p">(</span><span class="n">src</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">64</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">SegmentWriter</span><span class="p">.</span><span class="na">NO_SPACE</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// move to the next segment (M1 does this for you)</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Programming mistakes, like a negative length or committing twice, still throw exceptions, because they should never happen in correct code.</p>
+<h3 id="9-try-finally-for-consistent-state">9. <code>try</code> / <code>finally</code> for consistent state<a class="headerlink" href="#9-try-finally-for-consistent-state" title="Permanent link">&para;</a></h3>
+<p><strong>The concept.</strong> A <code>finally</code> block always runs, even if an exception is thrown.</p>
+<p><strong>In Wally.</strong> If your handler throws, the reader still saves how far it got, so the failing record isn't delivered again in an endless loop:</p>
+<div class="highlight"><pre><span></span><code><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">count</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">recordLimit</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">offset</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">limit</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cm">/* deliver records */</span><span class="w"> </span><span class="p">}</span>
+<span class="p">}</span><span class="w"> </span><span class="k">finally</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="na">offset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">offset</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="10-java-modules-module-infojava">10. Java modules (<code>module-info.java</code>)<a class="headerlink" href="#10-java-modules-module-infojava" title="Permanent link">&para;</a></h3>
+<p><strong>The concept.</strong> A module declares which packages other code may use.</p>
+<p><strong>In Wally.</strong></p>
+<div class="highlight"><pre><span></span><code><span class="kd">module</span> <span class="nc">io</span><span class="p">.</span><span class="na">wally</span><span class="p">.</span><span class="na">core</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">exports</span><span class="w"> </span><span class="n">io</span><span class="p">.</span><span class="na">wally</span><span class="p">.</span><span class="na">api</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Only <code>io.wally.api</code> is visible to users. Everything under <code>io.wally.internal</code> can change freely without breaking anyone.</p>
+<h3 id="11-proving-it-measuring-allocation">11. Proving it: measuring allocation<a class="headerlink" href="#11-proving-it-measuring-allocation" title="Permanent link">&para;</a></h3>
+<p>How do we <em>know</em> Wally doesn't allocate? Three independent checks:</p>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>How it works</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Per-thread counter</td>
+<td><code>ThreadMXBean.getCurrentThreadAllocatedBytes()</code> before and after 1M records; must be under 1 KB</td>
+<td><code>ZeroAllocationTest</code></td>
+</tr>
+<tr>
+<td>Epsilon GC</td>
+<td>Runs 50M records with a GC that never frees memory and a 128 MB heap. Any per-record allocation would run out of memory</td>
+<td><code>./gradlew :wally-core:epsilonTest</code></td>
+</tr>
+<tr>
+<td>JMH profiler</td>
+<td>Reports bytes allocated per operation: ≈ 0.0001</td>
+<td><code>./gradlew :wally-bench:jmh -Pjmh.profilers=gc</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="code-map">Code map<a class="headerlink" href="#code-map" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>api/RecordHandler.java</code></td>
+<td>Callback you implement to receive records</td>
+</tr>
+<tr>
+<td><code>api/Claim.java</code></td>
+<td>Reserved space you write into, then commit or abort</td>
+</tr>
+<tr>
+<td><code>internal/memory/Mem.java</code></td>
+<td>Acquire/release and atomic reads/writes on off-heap memory</td>
+</tr>
+<tr>
+<td><code>internal/memory/Align.java</code></td>
+<td>Rounding up to multiples of 8</td>
+</tr>
+<tr>
+<td><code>internal/log/RecordFormat.java</code></td>
+<td>Record header layout, publish and padding helpers</td>
+</tr>
+<tr>
+<td><code>internal/log/SegmentWriter.java</code></td>
+<td>Appends records to one segment; doubles as the <code>Claim</code></td>
+</tr>
+<tr>
+<td><code>internal/log/SegmentReader.java</code></td>
+<td>Reads committed records from one segment</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "search.suggest"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  </body>
+</html>

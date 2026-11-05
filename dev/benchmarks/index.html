@@ -290,6 +290,121 @@
   
   
   
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Start here
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Start here
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-it-works/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How Wally works
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../concepts/" class="md-nav__link">
         
@@ -299,6 +414,33 @@
     
   
     Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../record-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Record layout
   
 
     
@@ -331,10 +473,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
             
   
   
@@ -352,8 +494,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -569,6 +711,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#m0-single-thread-append-read" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M0: single-thread append + read
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -597,10 +750,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
             
   
   
@@ -618,8 +771,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -796,6 +949,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#m0-single-thread-append-read" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M0: single-thread append + read
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -817,13 +981,9 @@
 
 
 <h1 id="benchmarks">Benchmarks<a class="headerlink" href="#benchmarks" title="Permanent link">&para;</a></h1>
-<div class="admonition info">
-<p class="admonition-title">Pending</p>
-<p>First results land with M0 (1P1C) and M2 (NP1C).</p>
-</div>
 <h2 id="methodology">Methodology<a class="headerlink" href="#methodology" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Harness</strong>: JMH for throughput; a fixed-rate driver + HdrHistogram for latency, to avoid coordinated omission.</li>
+<li><strong>Harness</strong>: JMH for throughput; a fixed-rate driver + HdrHistogram for latency (from M2), to avoid coordinated omission.</li>
 <li><strong>Scenarios</strong>: 1P1C and NP1C (N = 1, 2, 4, 8); payloads 32 B, 256 B, 4 KB; flush policies <code>none</code>, <code>periodic(1ms/5ms)</code>, <code>sync</code>.</li>
 <li><strong>Baselines</strong>: <code>ArrayBlockingQueue</code>, JCTools MPSC, LMAX Disruptor, Chronicle Queue.</li>
 <li><strong>Allocation</strong>: JMH <code>-prof gc</code> (<code>gc.alloc.rate.norm</code>) and an Epsilon GC run.</li>
@@ -832,6 +992,51 @@
 <h2 id="reproduce">Reproduce<a class="headerlink" href="#reproduce" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>./gradlew<span class="w"> </span>:wally-bench:jmh<span class="w"> </span>-Pjmh.profilers<span class="o">=</span>gc
 </code></pre></div>
+<h2 id="m0-single-thread-append-read">M0: single-thread append + read<a class="headerlink" href="#m0-single-thread-append-read" title="Permanent link">&para;</a></h2>
+<p><code>SegmentLogBenchmark</code>: one thread appends a record and reads it back. Measures the raw cost of framing, the release/acquire publish and the copy, plus allocation.</p>
+<p><strong>Environment:</strong> Apple M4 Pro, macOS 26.4.1, Temurin 25.0.5, JMH 1.37, 1 fork, 3×1 s warmup, 5×1 s measurement, laptop (no core pinning).</p>
+<table>
+<thead>
+<tr>
+<th>Benchmark</th>
+<th>32 B</th>
+<th>256 B</th>
+<th>4 KB</th>
+<th>Allocation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>wallyClaimCommitRead</code> (zero copy)</td>
+<td>5.95 ns</td>
+<td>8.52 ns</td>
+<td>42.3 ns</td>
+<td>≈ 0 B/op</td>
+</tr>
+<tr>
+<td><code>wallyAppendRead</code> (copy in)</td>
+<td>7.79 ns</td>
+<td>12.5 ns</td>
+<td>103 ns</td>
+<td>≈ 0 B/op</td>
+</tr>
+<tr>
+<td><code>arrayBlockingQueueOfferPoll</code> (new <code>byte[]</code> per message)</td>
+<td>10.1 ns</td>
+<td>11.6 ns</td>
+<td>91.2 ns</td>
+<td>payload + 16 B/op</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="admonition-title">How to read these numbers</p>
+<ul>
+<li>Single-threaded, so there is no lock contention. <code>ArrayBlockingQueue</code>'s real cost appears under contention and as GC pressure over time. Those effects show up in the cross-thread benchmarks (M2).</li>
+<li>The 1 MB benchmark buffer is re-zeroed when full. At 4 KB that happens every ~255 records and inflates the Wally numbers. In the real log, new segments are zeroed ahead of time by the preallocator (M1).</li>
+<li>Laptop numbers. Reference results will come from dedicated Linux hardware.</li>
+</ul>
+</div>
 
 
 

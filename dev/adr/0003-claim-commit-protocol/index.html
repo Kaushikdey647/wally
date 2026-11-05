@@ -290,6 +290,121 @@
   
   
   
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Start here
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Start here
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-it-works/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How Wally works
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../../concepts/" class="md-nav__link">
         
@@ -299,6 +414,33 @@
     
   
     Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../record-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Record layout
   
 
     
@@ -331,10 +473,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
             
   
   
@@ -352,8 +494,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -530,10 +672,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
             
   
   
@@ -551,8 +693,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_6">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -846,16 +988,16 @@
 <p>Producers must write records in place (zero copy) while readers scan concurrently, without locks. Readers must never observe a partially written record.</p>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
 <ol>
-<li><strong>Claim:</strong> reserve <code>align8(16 + len)</code> bytes at the tail. The <code>length</code> field is still 0.</li>
+<li><strong>Claim:</strong> reserve <code>align8(16 + len)</code> bytes at the tail. The <code>frameLength</code> field is still 0.</li>
 <li><strong>Write:</strong> fill type, flags, CRC and payload with plain stores.</li>
-<li><strong>Commit:</strong> store <code>length</code> with <code>setRelease</code>.</li>
+<li><strong>Commit:</strong> store <code>frameLength</code> (header + payload) with <code>setRelease</code>.</li>
 </ol>
-<p>Readers load <code>length</code> with <code>getAcquire</code>. <code>0</code> means "not committed", so stop. A positive value guarantees the rest of the record is visible (release/acquire happens-before).</p>
-<p>Segments are zero-filled on creation, so unwritten space always reads as <code>length == 0</code>.</p>
+<p>Readers load <code>frameLength</code> with <code>getAcquire</code>. <code>0</code> means "not committed", so stop. A positive value guarantees the rest of the record is visible (release/acquire happens-before).</p>
+<p>Segments are zero-filled on creation, so unwritten space always reads as <code>frameLength == 0</code>. Aborted claims are rewritten as padding frames.</p>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>+</strong> One release store per record; no locks, no CAS on the read path.</li>
-<li><strong>+</strong> Torn writes after a crash show up as <code>length == 0</code> or a CRC mismatch, which makes recovery simple.</li>
+<li><strong>+</strong> Torn writes after a crash show up as <code>frameLength == 0</code> or a CRC mismatch, which makes recovery simple.</li>
 <li><strong>−</strong> A producer that dies between claim and commit leaves a hole that blocks readers. Mitigation (post-MVP): an unblocker that pads over holes after a timeout.</li>
 <li><strong>−</strong> Max payload is bounded by <code>int</code> and by segment size minus headers.</li>
 </ul>
