@@ -1,0 +1,1301 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="High-throughput, zero-allocation off-heap hybrid WAL & event queue for Java">
+      
+      
+      
+      
+        <link rel="prev" href="../../concepts/">
+      
+      
+        <link rel="next" href="../../format/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>Blueprint - Wally</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#blueprint" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Wally" class="md-header__button md-logo" aria-label="Wally" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Wally
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Blueprint
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/kaushikdey647/wally" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Wally" class="md-nav__button md-logo" aria-label="Wally" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Wally
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/kaushikdey647/wally" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Blueprint
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Blueprint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#0-core-idea" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0. Core idea
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-problems-to-solve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Problems to solve
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-code-organization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Code organization
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Code organization">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#api-shape-sketch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API shape (sketch)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Patterns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-utility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Utility
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Testing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#functional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functional
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#non-functional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Non-functional
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Documentation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guarantees/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guarantees
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADRs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ADRs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/0001-ffm-over-unsafe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0001 FFM over Unsafe
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/0002-position-addressing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0002 Position addressing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/0003-claim-commit-protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0003 Claim/commit protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/0004-fetch-add-tail/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0004 Fetch-add tail
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#0-core-idea" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0. Core idea
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-problems-to-solve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Problems to solve
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-code-organization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Code organization
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Code organization">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#api-shape-sketch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API shape (sketch)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Patterns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-utility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Utility
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Testing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#functional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functional
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#non-functional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Non-functional
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Documentation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="blueprint">Blueprint<a class="headerlink" href="#blueprint" title="Permanent link">&para;</a></h1>
+<h2 id="0-core-idea">0. Core idea<a class="headerlink" href="#0-core-idea" title="Permanent link">&para;</a></h2>
+<p>Build one thing: an <strong>append-only log addressed by position</strong>. Both modes sit on top of it:</p>
+<ul>
+<li><strong>WAL</strong> = log + durability policy + crash recovery + truncation at checkpoints.</li>
+<li><strong>Event queue</strong> = log + named consumer cursors + retention (delete a segment once every cursor has passed it).</li>
+</ul>
+<p>Prior art worth studying: Agrona and Aeron (log buffers), Chronicle Queue, the LMAX Disruptor.</p>
+<p><strong>Foundational decision:</strong> use the Java 22+ FFM API (<code>MemorySegment</code>, <code>Arena</code>, <code>VarHandle</code>) instead of <code>sun.misc.Unsafe</code>. See <a href="../../adr/0001-ffm-over-unsafe/">ADR 0001</a>.</p>
+<ul>
+<li>JDK 24+ warns on <code>Unsafe</code> memory access, and it is headed for removal.</li>
+<li><code>FileChannel.map(mode, off, size, arena)</code> gives deterministic unmapping with <code>arena.close()</code>. That fixes the old <code>MappedByteBuffer</code> unmap problem.</li>
+<li><code>Linker</code> allows calling <code>madvise</code>/<code>mlock</code> without JNI.</li>
+</ul>
+<h2 id="1-problems-to-solve">1. Problems to solve<a class="headerlink" href="#1-problems-to-solve" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Problem</th>
+<th>Approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Record framing</strong></td>
+<td>8-byte aligned header: <code>int length</code>, <code>short type</code>, <code>short flags</code>, <code>int crc32c</code>, then the payload. Little-endian, fixed. A <code>PADDING</code> record type fills the rest of a segment.</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Atomic publish</strong></td>
+<td>Two-phase claim/commit. A producer reserves space, writes the payload, then writes <code>length</code> last with <code>setRelease</code>. Readers <code>getAcquire</code> the length; <code>0</code> means "not committed yet, stop here."</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Multi-producer contention</strong></td>
+<td><code>getAndAdd</code> on the tail counter (fetch-add, not a CAS loop, so there are no retries). 128-byte padding around hot counters to avoid false sharing. Single-writer first, then MPSC.</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Segment rollover</strong></td>
+<td>Fixed-size segment files (e.g. 1 GiB). The producer whose claim crosses the boundary writes the padding and triggers the roll; other producers retry. Logical position is <code>segmentIdx * segSize + offset</code>, so seeking is O(1) with no index file.</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Page-fault stalls</strong></td>
+<td>A background thread pre-allocates and pre-touches the next segment, plus <code>madvise(SEQUENTIAL/WILLNEED)</code>. Document THP and <code>vm.dirty_*</code> tuning.</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Durability</strong></td>
+<td>mmap writes only reach the page cache. Flush policies <code>NONE</code>, <code>PERIODIC</code> (group commit every N ms) and <code>SYNC</code>, via <code>MemorySegment.force()</code>. macOS needs <code>F_FULLFSYNC</code> for real durability. Document what "acknowledged" means for each policy.</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Crash recovery</strong></td>
+<td>On open, scan forward from the last checkpoint and validate each CRC. Truncate at the first torn or zero frame. File header: magic + format version + segment size.</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Stuck producer (hole)</strong></td>
+<td>A producer thread that dies between claim and commit blocks readers forever. Fix (post-MVP): after a timeout, an "unblocker" writes padding over the hole (as Aeron does).</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>Segment lifetime vs. readers</strong></td>
+<td>Closing a shared <code>Arena</code> while a reader is using it throws. Reference counting or epoch-based reclamation before unmapping or deleting.</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>Zero allocation</strong></td>
+<td><code>MemorySegment.asSlice()</code> allocates. Expose <code>(segment, offset, length)</code> instead of slices. Reused flyweights, non-capturing or pre-allocated handlers, return codes instead of exceptions. No iterators, boxing or varargs on the hot path.</td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>Backpressure / waiting</strong></td>
+<td><code>WaitStrategy</code>: busy-spin, then <code>Thread.onSpinWait</code>, then yield, then park. Queue mode returns <code>BACK_PRESSURED</code> when retention would be exceeded.</td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong>Cross-process (post-MVP)</strong></td>
+<td>Shared mmap'd metadata file holding the tail and cursors. Aligned CAS on mapped memory works across processes.</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">State the claims precisely</p>
+<ul>
+<li>"Zero-allocation" means steady state on the hot path.</li>
+<li>"Lock-free" means the append and read paths; fsync is not lock-free.</li>
+</ul>
+</div>
+<h2 id="2-code-organization">2. Code organization<a class="headerlink" href="#2-code-organization" title="Permanent link">&para;</a></h2>
+<p>Gradle multi-module build. Core has no runtime dependencies. JPMS <code>module-info</code> exports only <code>io.wally.api</code>.</p>
+<div class="highlight"><pre><span></span><code>wally/
+├─ wally-core/        # io.wally.api              public: Wally, Appender, Claim, Tailer, configs
+│                     # io.wally.internal.memory  FFM, VarHandles, alignment, native madvise
+│                     # io.wally.internal.log     framing, appender, reader
+│                     # io.wally.internal.segment mapping, rolling, preallocation, refcount
+│                     # io.wally.internal.recovery scan, CRC verify, truncate
+│                     # io.wally.internal.concurrent padded counters, wait strategies, agents
+│                     # io.wally.internal.queue   consumer groups, cursors, retention
+├─ wally-bench/       # JMH
+├─ wally-stress/      # jcstress + Lincheck
+├─ wally-examples/    # event-sourcing journal, inter-thread pipeline
+├─ docs/              # this site + ADRs
+│  (post-MVP)
+├─ wally-codec-sbe/   # optional SBE integration
+├─ wally-metrics/     # optional Micrometer binding
+└─ wally-tools/       # CLI: dump / verify / recover / stats
+</code></pre></div>
+<h3 id="api-shape-sketch">API shape (sketch)<a class="headerlink" href="#api-shape-sketch" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">try</span><span class="w"> </span><span class="p">(</span><span class="n">Wally</span><span class="w"> </span><span class="n">wal</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Wally</span><span class="p">.</span><span class="na">builder</span><span class="p">().</span><span class="na">dir</span><span class="p">(</span><span class="n">p</span><span class="p">).</span><span class="na">segmentSize</span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">30</span><span class="p">)</span>
+<span class="w">        </span><span class="p">.</span><span class="na">flush</span><span class="p">(</span><span class="n">FlushPolicy</span><span class="p">.</span><span class="na">periodic</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofMillis</span><span class="p">(</span><span class="mi">5</span><span class="p">))).</span><span class="na">open</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Appender</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">wal</span><span class="p">.</span><span class="na">appender</span><span class="p">();</span><span class="w">                  </span><span class="c1">// one per thread, reused</span>
+<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="n">pos</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="na">append</span><span class="p">(</span><span class="n">src</span><span class="p">,</span><span class="w"> </span><span class="n">off</span><span class="p">,</span><span class="w"> </span><span class="n">len</span><span class="p">);</span><span class="w">           </span><span class="c1">// copy path</span>
+<span class="w">    </span><span class="n">Claim</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="na">tryClaim</span><span class="p">(</span><span class="mi">64</span><span class="p">);</span><span class="w">                     </span><span class="c1">// zero-copy path, reused flyweight</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">c</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">c</span><span class="p">.</span><span class="na">segment</span><span class="p">().</span><span class="na">set</span><span class="p">(</span><span class="n">JAVA_LONG</span><span class="p">,</span><span class="w"> </span><span class="n">c</span><span class="p">.</span><span class="na">offset</span><span class="p">(),</span><span class="w"> </span><span class="mi">42L</span><span class="p">);</span><span class="w"> </span><span class="n">c</span><span class="p">.</span><span class="na">commit</span><span class="p">();</span><span class="w"> </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">Tailer</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">wal</span><span class="p">.</span><span class="na">tailer</span><span class="p">(</span><span class="s">"billing"</span><span class="p">);</span><span class="w">             </span><span class="c1">// named, persisted cursor</span>
+<span class="w">    </span><span class="n">t</span><span class="p">.</span><span class="na">poll</span><span class="p">((</span><span class="n">seg</span><span class="p">,</span><span class="w"> </span><span class="n">off</span><span class="p">,</span><span class="w"> </span><span class="n">len</span><span class="p">,</span><span class="w"> </span><span class="n">position</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="mi">256</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Methods return <code>long</code> positions, with negative constants for <code>BACK_PRESSURED</code>, <code>ROLLING</code> and <code>CLOSED</code> (the Aeron style).</p>
+<h2 id="3-patterns">3. Patterns<a class="headerlink" href="#3-patterns" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Flyweight</strong>: <code>Claim</code> and record views over raw memory, with no per-message objects.</li>
+<li><strong>Two-phase claim/commit</strong>: the publish protocol.</li>
+<li><strong>Single Writer Principle</strong>: the default mode. MPSC is opt-in.</li>
+<li><strong>Sequence/cursor (Disruptor)</strong>: consumers are just positions.</li>
+<li><strong>Strategy</strong>: <code>WaitStrategy</code>, <code>FlushPolicy</code>, <code>RetentionPolicy</code>.</li>
+<li><strong>Builder + immutable config</strong>.</li>
+<li><strong>Agent / duty cycle (Agrona)</strong>: background flusher, preallocator and retention cleaner on one optional thread.</li>
+<li><strong>ADRs</strong>: every non-obvious decision is recorded in <code>docs/adr/</code>.</li>
+</ul>
+<h2 id="4-utility">4. Utility<a class="headerlink" href="#4-utility" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Target use cases</strong>, each shipped as an example: event-sourcing journal, local durable outbox in front of Kafka, inter-thread pipeline, replication log for a KV store.</li>
+<li><strong>Zero dependencies</strong> in core, published to Maven Central.</li>
+<li><strong>Explicit guarantees table</strong>: what survives a process crash vs. a power loss under each <code>FlushPolicy</code>. See <a href="../../guarantees/">Guarantees</a>.</li>
+<li><strong>CLI tooling</strong> to inspect and repair files.</li>
+<li><strong>Stability</strong>: file-format versioning, API compatibility checks with japicmp, semver.</li>
+<li><strong>Honest benchmarks</strong> against <code>ArrayBlockingQueue</code>, JCTools MPSC, Disruptor and Chronicle Queue, with reproducible scripts.</li>
+</ul>
+<h2 id="5-testing">5. Testing<a class="headerlink" href="#5-testing" title="Permanent link">&para;</a></h2>
+<h3 id="functional">Functional<a class="headerlink" href="#functional" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Tool</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unit</td>
+<td>JUnit 5</td>
+<td>Framing, alignment, padding, rollover at exact boundaries, CRC</td>
+</tr>
+<tr>
+<td>Model-based</td>
+<td>jqwik</td>
+<td>Random append/poll/roll/reopen sequences checked against an <code>ArrayList</code> oracle</td>
+</tr>
+<tr>
+<td>Memory ordering</td>
+<td>jcstress</td>
+<td>Claim → commit → read visibility; no torn length/payload observed</td>
+</tr>
+<tr>
+<td>Linearizability</td>
+<td>Lincheck</td>
+<td>MPSC append + concurrent tailers</td>
+</tr>
+<tr>
+<td>Crash</td>
+<td>Child JVM + <code>kill -9</code> mid-write, then reopen</td>
+<td>Prefix property: every durable-acknowledged record is present and no corrupt record is surfaced</td>
+</tr>
+<tr>
+<td>Power loss</td>
+<td>LazyFS (FUSE that drops unsynced writes), Linux CI</td>
+<td>Validates <code>FlushPolicy</code> guarantees for real</td>
+</tr>
+<tr>
+<td>Corruption</td>
+<td>Jazzer fuzzing of the recovery scanner; random byte flips and truncation</td>
+<td>Recovery never crashes or returns garbage</td>
+</tr>
+<tr>
+<td>Soak</td>
+<td>Multi-hour run with rollover + retention</td>
+<td>Leaks, file-descriptor growth, mapping leaks</td>
+</tr>
+</tbody>
+</table>
+<h3 id="non-functional">Non-functional<a class="headerlink" href="#non-functional" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Throughput and latency</strong>: JMH across 1P1C and NP1C, payloads from 32 B to 4 KB. HdrHistogram with a fixed-rate load generator so coordinated omission doesn't hide tail latency. Report p50/p99/p99.99/max.</li>
+<li><strong>Zero-allocation proof</strong>:<ul>
+<li>JMH <code>-prof gc</code>: assert <code>gc.alloc.rate.norm == 0</code>.</li>
+<li>Steady-state run under <code>-XX:+UseEpsilonGC</code> with a small heap. Any allocation eventually exhausts the heap and fails the run.</li>
+<li>JFR allocation events as a cross-check.</li>
+</ul>
+</li>
+<li><strong>Profiling</strong>: async-profiler and JMH <code>-prof perfasm</code>.</li>
+<li><strong>Durability cost</strong>: throughput vs. flush interval curve.</li>
+<li><strong>Environment</strong>: real numbers on dedicated Linux with pinned cores and <code>isolcpus</code>. CI perf checks only as coarse regression gates.</li>
+<li><strong>Matrix</strong>: JDK 25 LTS × Linux x86/ARM × macOS.</li>
+</ul>
+<h2 id="6-documentation">6. Documentation<a class="headerlink" href="#6-documentation" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Javadoc</strong> for <code>io.wally.api</code> only, hosted on javadoc.io once published to Central.</li>
+<li><strong>This site</strong>: MkDocs Material in <code>/docs</code>, deployed to GitHub Pages by GitHub Actions, versioned with <code>mike</code>.</li>
+<li>Sections: Getting Started, Concepts, File format, Guarantees, Tuning, Benchmarks, ADRs, CLI reference.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "search.suggest"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  </body>
+</html>
