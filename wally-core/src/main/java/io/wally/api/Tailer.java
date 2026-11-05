@@ -41,11 +41,14 @@ public final class Tailer {
     }
 
     private void rollToNextSegment() {
-        long nextPosition = reader.position();
+        long currentPosition = reader.position();
         manager.release(current);
-        current = manager.acquire(nextPosition);
-        long offsetInSegment = nextPosition - current.file.basePosition();
-        reader.wrap(current.data, offsetInSegment, current.file.basePosition());
+        // Calculate the next segment's starting position
+        long currentSegmentIndex = currentPosition / manager.segmentSize();
+        long nextSegmentIndex = currentSegmentIndex + 1;
+        long nextSegmentStart = nextSegmentIndex * manager.segmentSize();
+        current = manager.acquire(nextSegmentStart);
+        reader.wrap(current.data, 0, current.file.basePosition());
     }
 
     public long position() {
