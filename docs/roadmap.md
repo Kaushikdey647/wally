@@ -7,15 +7,15 @@ flowchart LR
   M0[M0 memory layer] --> M1[M1 mmap segments] --> M2[M2 MPSC] --> M3[M3 durability + recovery] --> M4[M4 consumer groups + retention]
 ```
 
-## M0: memory layer + in-memory log
+## M0: memory layer + in-memory log ✅
 
-- `Mem` (static aligned `VarHandle`s: plain, acquire/release, getAndAdd, CAS) and `PaddedCounter` (value isolated by 128 B padding).
-- `RecordFormat`: `int length | short type | short flags | int crc | int reserved` (16 B header, 8 B alignment). `length == 0` means uncommitted. `TYPE_PADDING` fills the end of a segment.
-- Single-writer append/poll over one `Arena.ofShared().allocate(size, 4096)` segment.
+- `Mem` (static aligned `VarHandle`s: acquire/release, volatile, getAndAdd, CAS) and `Align`.
+- `RecordFormat`: `int frameLength | short type | short flags | int crc | int reserved` (16 B header, 8 B alignment). `frameLength == 0` means uncommitted. `TYPE_PADDING` fills the end of a segment and replaces aborted claims.
+- `SegmentWriter` (single writer; doubles as the `Claim` flyweight) and `SegmentReader` over one off-heap segment.
 - Read API: `RecordHandler.onRecord(MemorySegment seg, long offset, int length, long position)`, so there are no slices.
-- JMH 1P1C vs `ArrayBlockingQueue` (payloads 32 B, 256 B, 4 KB).
+- JMH single-thread append + read vs `ArrayBlockingQueue` (payloads 32 B, 256 B, 4 KB). Cross-thread benchmarks moved to M2, since a single fixed segment can't sustain a long 1P1C run.
 
-**Exit:** unit tests pass; JMH `-prof gc` shows `gc.alloc.rate.norm ≈ 0`; Epsilon GC test passes (`-XX:+UseEpsilonGC -Xmx64m`, 50M records).
+**Exit (met):** unit tests pass, including a cross-thread ordering test; JMH `-prof gc` shows `gc.alloc.rate.norm ≈ 10⁻⁴ B/op`; `ThreadMXBean` check shows < 1 KB over 1M records; Epsilon GC test passes (`-Xmx128m`, 50M records).
 
 ## M1: mmap'd segments, single writer
 
@@ -30,6 +30,7 @@ flowchart LR
 
 ## M2: multi-producer claim/commit
 
+- `PaddedCounter` (value isolated by 128 B padding) for the shared tail.
 - Tail claim with `getAndAdd` ([ADR 0004](adr/0004-fetch-add-tail.md)). The claimant whose range covers the end of a segment writes padding and triggers the roll; claimants landing past the end retry.
 - Commit: payload first, then `setRelease(length)`. Reader: `getAcquire(length)` ([ADR 0003](adr/0003-claim-commit-protocol.md)).
 - `producerMode(SINGLE | MULTI)`. Single mode uses a plain store.
