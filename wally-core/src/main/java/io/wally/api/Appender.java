@@ -64,8 +64,8 @@ public final class Appender implements Claim {
     private void roll() {
         writer.padToEnd();
         manager.release(current);
-        manager.rollToNext();
-        long nextPosition = writer.tailPosition();
+        long nextSegmentIndex = manager.rollToNext();
+        long nextPosition = nextSegmentIndex * manager.segmentSize();
         current = manager.acquire(nextPosition);
         writer.wrap(current.data, 0, current.file.basePosition());
     }

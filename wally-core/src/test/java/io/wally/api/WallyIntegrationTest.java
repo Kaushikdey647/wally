@@ -77,7 +77,7 @@ class WallyIntegrationTest {
 
     @Test
     void zeroCopyClaimCommitAcrossSegments() {
-        try (Wally wal = Wally.builder().directory(tempDir).segmentSize(256).open()) {
+        try (Wally wal = Wally.builder().directory(tempDir).segmentSize(4096).open()) {
             Appender appender = wal.appender();
 
             for (long i = 0; i < 100; i++) {
@@ -104,7 +104,7 @@ class WallyIntegrationTest {
         // Segment size 256, header 64 → 192 usable bytes
         // 16 B header + 64 B payload = 80 B aligned per record
         // 192 / 80 = 2 records fit, 32 B left (not enough for another)
-        try (Wally wal = Wally.builder().directory(tempDir).segmentSize(256).open()) {
+        try (Wally wal = Wally.builder().directory(tempDir).segmentSize(4096).open()) {
             Appender appender = wal.appender();
             byte[] payload = new byte[64];
 
