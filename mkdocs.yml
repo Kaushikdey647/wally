@@ -44,6 +44,7 @@ nav:
       - How Wally works: how-it-works.md
       - Glossary: glossary.md
   - Concepts: concepts.md
+  - Record layout: record-layout.md
   - Design:
       - Blueprint: design/blueprint.md
       - File format: format.md
