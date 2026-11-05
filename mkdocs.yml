@@ -1,0 +1,49 @@
+site_name: Wally
+site_description: High-throughput, zero-allocation off-heap hybrid WAL & event queue for Java
+repo_url: https://github.com/kaushikdey647/wally
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+  palette:
+    - scheme: default
+      toggle: { icon: material/brightness-7, name: Dark mode }
+    - scheme: slate
+      toggle: { icon: material/brightness-4, name: Light mode }
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc: { permalink: true }
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+extra:
+  version:
+    provider: mike
+
+nav:
+  - Home: index.md
+  - Concepts: concepts.md
+  - Design:
+      - Blueprint: design/blueprint.md
+      - File format: format.md
+      - Guarantees: guarantees.md
+  - Roadmap: roadmap.md
+  - Benchmarks: benchmarks.md
+  - ADRs:
+      - 0001 FFM over Unsafe: adr/0001-ffm-over-unsafe.md
+      - 0002 Position addressing: adr/0002-position-addressing.md
+      - 0003 Claim/commit protocol: adr/0003-claim-commit-protocol.md
+      - 0004 Fetch-add tail: adr/0004-fetch-add-tail.md
