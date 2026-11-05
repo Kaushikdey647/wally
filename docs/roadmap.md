@@ -36,8 +36,11 @@ flowchart LR
 - `producerMode(SINGLE | MULTI)`. Single mode uses a plain store.
 - jcstress (commit visibility, no torn header/payload) and Lincheck (MPSC append + tailer).
 - JMH NP1C (N = 1, 2, 4, 8) with HdrHistogram and a fixed-rate driver.
+- **Competitor benchmarks** (moved from M6): JCTools MPSC, Chronicle Queue
+  - Adds ~4 days to M2 but provides essential context for multi-producer results
+  - See issue #4 for full benchmarking plan
 
-**Exit:** no forbidden jcstress outcomes; Lincheck passes; still zero allocation.
+**Exit:** no forbidden jcstress outcomes; Lincheck passes; still zero allocation; competitor benchmarks complete.
 
 ## M3: durability + crash recovery
 
