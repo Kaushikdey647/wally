@@ -5,6 +5,11 @@ plugins {
 
 dependencies {
     jmh(project(":wally-core"))
+
+    // Competitor baselines
+    jmh("org.jctools:jctools-core:4.0.5")
+    jmh("net.openhft:chronicle-queue:2026.8")
+    jmh("com.lmax:disruptor:4.0.0")
 }
 
 jmh {
