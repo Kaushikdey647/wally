@@ -79,3 +79,38 @@ When you write code, update the docs in the same commit or the very next one:
 - Require CI to pass before merging
 - Require at least one review (if working with others)
 - No direct pushes to `main`
+
+## Quality principles
+
+### Completeness over box-ticking
+
+**When building a feature or benchmark, prioritize production-grade completeness over "done" checkmarks.**
+
+**For benchmarks specifically:**
+
+- **Test realistic workloads**, not synthetic best-cases
+  - Multi-threaded benchmarks for concurrent data structures
+  - Cold starts AND steady-state
+  - Edge cases: segment boundaries, queue full, etc.
+- **Measure what matters**
+  - Tail latency (p99, p99.9, p99.99), not just averages
+  - Use HdrHistogram + fixed-rate drivers to avoid coordinated omission
+  - GC pauses, allocation rate, thread contention
+- **Fair comparisons**
+  - Match durability guarantees (flush policies)
+  - Match concurrency models (MPSC vs MPSC, not single-thread)
+  - Document what's different (API maturity, Unsafe vs FFM)
+- **Reproducible**
+  - Pin versions, document environment (CPU, OS, JDK)
+  - Publish raw data, not just summaries
+  - CI regression gates (coarse) + dedicated hardware (detailed)
+
+**For code:**
+
+- **Validate assumptions** with property tests (jqwik), concurrency tests (jcstress/Lincheck)
+- **Handle edge cases** that will happen in production: segment rollover, stuck producers, disk full
+- **Instrument for debugging**: expose internal state (tail position, flushed position) for troubleshooting
+
+**Why:** A half-baked feature shipped is worse than waiting for the complete version. Wally's value proposition (zero-allocation, lock-free, durable) requires proof, not claims. Build to convince a skeptical engineer reviewing your code, not to check off a roadmap item.
+
+**When to compromise:** Pre-alpha/MVP scope cuts are fine IF documented. Mark as "TODO: cross-process IPC (M5)" or "Known limitation: no stuck-producer recovery yet." But within the chosen scope, go deep.
