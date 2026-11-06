@@ -161,13 +161,18 @@ public final class SegmentManager implements AutoCloseable {
      * (after padding to the end). The writer then acquires the new segment and continues.
      *
      * <p><b>Thread Safety:</b> Uses {@link AtomicLong#incrementAndGet()} for atomic increment.
-     * If multiple writers exist (future M3 feature), this ensures they coordinate on segment
-     * allocation.
+     * In MULTI mode, also resets the shared tail coordinator to the start of the new segment.
      *
      * @return the new current segment index (previous + 1)
      */
     public long rollToNext() {
-        return currentSegmentIndex.incrementAndGet();
+        long newIndex = currentSegmentIndex.incrementAndGet();
+        // In MULTI mode, reset shared tail to start of new segment
+        // In SINGLE mode, each appender manages its own tail via wrap()
+        if (producerMode == ProducerMode.MULTI) {
+            tailCoordinator.set(0);  // New segment starts at offset 0 (after header)
+        }
+        return newIndex;
     }
 
     /**

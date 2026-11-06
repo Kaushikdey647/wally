@@ -85,10 +85,13 @@ public class MPSCLatencyBenchmark {
     public void setupTrial(Blackhole bh) throws IOException {
         wallyDir = Files.createTempDirectory("wally-latency-bench-");
 
-        // Wally setup
+        // Wally setup - use MULTI mode for multi-producer benchmarks
         wally = Wally.builder()
                 .directory(wallyDir.resolve("wally"))
                 .segmentSize(512 * 1024 * 1024)  // 512 MB segments to avoid rollover during test
+                .producerMode(producers > 1 ?
+                    io.wally.api.ProducerMode.MULTI :
+                    io.wally.api.ProducerMode.SINGLE)
                 .open();
 
         wallyAppenders = new Appender[producers];

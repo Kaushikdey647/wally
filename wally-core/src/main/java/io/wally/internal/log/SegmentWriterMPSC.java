@@ -90,9 +90,14 @@ public final class SegmentWriterMPSC implements Claim {
         this.basePosition = basePosition;
         this.claimOffset = -1;
 
-        // Reset tail coordinator for new segment
-        tailCoordinator.set(startOffset);
+        // Update base position
         tailCoordinator.setSegmentBasePosition(basePosition);
+
+        // For SINGLE mode, reset tail to start offset for each new segment
+        // For MULTI mode, tail is managed globally by SegmentManager.rollToNext()
+        if (mode == ProducerMode.SINGLE) {
+            tailCoordinator.set(startOffset);
+        }
     }
 
     /**

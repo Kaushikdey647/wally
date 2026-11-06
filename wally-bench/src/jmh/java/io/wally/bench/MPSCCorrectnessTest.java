@@ -60,10 +60,11 @@ public class MPSCCorrectnessTest {
     }
 
     private static void runTest(Path tempDir) throws Exception {
-        // Setup Wally
+        // Setup Wally with MULTI producer mode for 8 concurrent producers
         Wally wally = Wally.builder()
                 .directory(tempDir)
                 .segmentSize(64 * 1024 * 1024)  // 64 MB segments - will roll during test
+                .producerMode(io.wally.api.ProducerMode.MULTI)
                 .open();
 
         try {
