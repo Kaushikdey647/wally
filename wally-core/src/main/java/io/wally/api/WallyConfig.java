@@ -10,11 +10,13 @@ public final class WallyConfig {
     private final Path directory;
     private final long segmentSize;
     private final ChecksumMode checksumMode;
+    private final ProducerMode producerMode;
 
-    private WallyConfig(Path directory, long segmentSize, ChecksumMode checksumMode) {
+    private WallyConfig(Path directory, long segmentSize, ChecksumMode checksumMode, ProducerMode producerMode) {
         this.directory = directory;
         this.segmentSize = segmentSize;
         this.checksumMode = checksumMode;
+        this.producerMode = producerMode;
     }
 
     public Path directory() {
@@ -29,6 +31,10 @@ public final class WallyConfig {
         return checksumMode;
     }
 
+    public ProducerMode producerMode() {
+        return producerMode;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -40,6 +46,7 @@ public final class WallyConfig {
         private Path directory;
         private long segmentSize = 1L << 30;  // 1 GiB default
         private ChecksumMode checksumMode = ChecksumMode.CRC32C;
+        private ProducerMode producerMode = ProducerMode.SINGLE;  // Default to single-producer (M1 compatible)
 
         public Builder directory(Path directory) {
             this.directory = directory;
@@ -56,6 +63,11 @@ public final class WallyConfig {
             return this;
         }
 
+        public Builder producerMode(ProducerMode mode) {
+            this.producerMode = mode;
+            return this;
+        }
+
         public WallyConfig build() {
             if (directory == null) {
                 throw new IllegalArgumentException("directory is required");
@@ -63,7 +75,7 @@ public final class WallyConfig {
             if (segmentSize < 4096 || !Align.isPowerOfTwo(segmentSize)) {
                 throw new IllegalArgumentException("segmentSize must be >= 4096 and a power of two, got " + segmentSize);
             }
-            return new WallyConfig(directory, segmentSize, checksumMode);
+            return new WallyConfig(directory, segmentSize, checksumMode, producerMode);
         }
     }
 }

@@ -235,6 +235,42 @@ public final class Wally implements AutoCloseable {
         }
 
         /**
+         * Sets the producer concurrency mode.
+         *
+         * <p><b>Default:</b> {@link ProducerMode#SINGLE} (M1 compatible).
+         *
+         * <p><b>Modes:</b>
+         * <ul>
+         *   <li>{@link ProducerMode#SINGLE}: One writer thread, no atomic operations (fastest)
+         *   <li>{@link ProducerMode#MULTI}: Multiple writer threads, lock-free coordination (M2)
+         * </ul>
+         *
+         * <p><b>Example:</b>
+         * <pre>
+         * // Multi-producer setup
+         * Wally wal = Wally.builder()
+         *     .directory(path)
+         *     .producerMode(ProducerMode.MULTI)
+         *     .open();
+         *
+         * // Thread 1
+         * Appender a1 = wal.appender();
+         * a1.append(...);
+         *
+         * // Thread 2
+         * Appender a2 = wal.appender();
+         * a2.append(...);
+         * </pre>
+         *
+         * @param mode the producer mode
+         * @return this builder
+         */
+        public Builder producerMode(ProducerMode mode) {
+            configBuilder.producerMode(mode);
+            return this;
+        }
+
+        /**
          * Builds the configuration and opens the WAL.
          *
          * <p><b>Side Effects:</b>
