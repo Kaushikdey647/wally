@@ -1,6 +1,7 @@
 package io.wally.api;
 
 import io.wally.internal.log.SegmentWriter;
+import io.wally.internal.log.SegmentWriterMPSC;
 import io.wally.internal.segment.SegmentDescriptor;
 import io.wally.internal.segment.SegmentFile;
 import io.wally.internal.segment.SegmentManager;
@@ -55,8 +56,8 @@ public final class Appender implements Claim {
     /** Configuration (checksum mode, segment size, etc.). */
     private final WallyConfig config;
 
-    /** Writes records into the current segment. */
-    private final SegmentWriter writer = new SegmentWriter();
+    /** Writes records into the current segment (MPSC-enabled). */
+    private final SegmentWriterMPSC writer;
 
     /** The currently acquired segment descriptor (file + mmap + refcount). */
     private SegmentDescriptor current;
@@ -70,6 +71,13 @@ public final class Appender implements Claim {
     Appender(SegmentManager manager, WallyConfig config) {
         this.manager = manager;
         this.config = config;
+
+        // Create MPSC-enabled writer with shared tail coordinator
+        this.writer = new SegmentWriterMPSC(
+                manager.tailCoordinator(),
+                config.producerMode()
+        );
+
         // Acquire the first segment (segment 0) and wrap the writer at its beginning
         this.current = manager.acquire(0);
         writer.wrap(current.data, 0, current.file.basePosition());
@@ -95,7 +103,7 @@ public final class Appender implements Claim {
      */
     public long append(MemorySegment src, long srcOffset, int length) {
         long position = writer.append(src, srcOffset, length);
-        if (position == SegmentWriter.NO_SPACE) {
+        if (position == SegmentWriterMPSC.NO_SPACE || position == SegmentWriterMPSC.SEGMENT_ROLLED) {
             roll();  // Pad current segment, acquire next one
             position = writer.append(src, srcOffset, length);
         }
@@ -122,7 +130,7 @@ public final class Appender implements Claim {
      */
     public long append(byte[] src, int srcOffset, int length) {
         long position = writer.append(src, srcOffset, length);
-        if (position == SegmentWriter.NO_SPACE) {
+        if (position == SegmentWriterMPSC.NO_SPACE || position == SegmentWriterMPSC.SEGMENT_ROLLED) {
             roll();  // Pad current segment, acquire next one
             position = writer.append(src, srcOffset, length);
         }
@@ -158,7 +166,7 @@ public final class Appender implements Claim {
      */
     public long tryClaim(int payloadLength) {
         long position = writer.tryClaim(payloadLength);
-        if (position == SegmentWriter.NO_SPACE) {
+        if (position == SegmentWriterMPSC.NO_SPACE || position == SegmentWriterMPSC.SEGMENT_ROLLED) {
             roll();  // Pad current segment, acquire next one
             position = writer.tryClaim(payloadLength);
         }

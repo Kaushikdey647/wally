@@ -81,7 +81,11 @@ public final class Wally implements AutoCloseable {
     private Wally(WallyConfig config) {
         this.config = config;
         // Create the segment manager (it will create the directory if needed)
-        this.segmentManager = new SegmentManager(config.directory(), config.segmentSize());
+        this.segmentManager = new SegmentManager(
+                config.directory(),
+                config.segmentSize(),
+                config.producerMode()
+        );
     }
 
     /**

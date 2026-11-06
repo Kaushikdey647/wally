@@ -1,5 +1,8 @@
 package io.wally.internal.segment;
 
+import io.wally.api.ProducerMode;
+import io.wally.internal.concurrent.TailCoordinator;
+
 import java.nio.file.Path;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -50,6 +53,12 @@ public final class SegmentManager implements AutoCloseable {
     /** Size of each segment file in bytes (header + data region). */
     private final long segmentSize;
 
+    /** Producer mode (SINGLE or MULTI). */
+    private final ProducerMode producerMode;
+
+    /** Shared tail coordinator for MPSC mode (null in SINGLE mode). */
+    private final TailCoordinator tailCoordinator;
+
     /** Pool of open segments, indexed by segment index. Thread-safe. */
     private final ConcurrentHashMap<Long, SegmentDescriptor> segments = new ConcurrentHashMap<>();
 
@@ -57,14 +66,17 @@ public final class SegmentManager implements AutoCloseable {
     private final AtomicLong currentSegmentIndex = new AtomicLong(0);
 
     /**
-     * Creates a segment manager for the given directory and segment size.
+     * Creates a segment manager for the given directory, segment size, and producer mode.
      *
      * @param directory the directory where segment files will be stored (created if missing)
      * @param segmentSize the size of each segment file in bytes (must be a multiple of 8)
+     * @param producerMode the producer concurrency mode (SINGLE or MULTI)
      */
-    public SegmentManager(Path directory, long segmentSize) {
+    public SegmentManager(Path directory, long segmentSize, ProducerMode producerMode) {
         this.directory = directory;
         this.segmentSize = segmentSize;
+        this.producerMode = producerMode;
+        this.tailCoordinator = new TailCoordinator(producerMode, segmentSize);
     }
 
     /**
@@ -165,6 +177,27 @@ public final class SegmentManager implements AutoCloseable {
      */
     public long segmentSize() {
         return segmentSize;
+    }
+
+    /**
+     * Returns the producer mode (SINGLE or MULTI).
+     *
+     * @return the producer mode
+     */
+    public ProducerMode producerMode() {
+        return producerMode;
+    }
+
+    /**
+     * Returns the shared tail coordinator for MPSC mode.
+     *
+     * <p>In SINGLE mode, this returns a coordinator that uses a local tail.
+     * In MULTI mode, this returns a coordinator with a shared PaddedCounter.
+     *
+     * @return the tail coordinator
+     */
+    public TailCoordinator tailCoordinator() {
+        return tailCoordinator;
     }
 
     /**
