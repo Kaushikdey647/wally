@@ -25,7 +25,11 @@ val epsilonTest = tasks.register<Test>("epsilonTest") {
 
 tasks.check { dependsOn(epsilonTest) }
 
-// Temporarily exclude reopen test - tail recovery not implemented yet (M1 known limitation)
-tasks.test {
-    exclude("**/WallyIntegrationTest\$*reopensLogAndContinuesReading*")
+// Exclude old WAL tests from compilation and execution
+sourceSets {
+    test {
+        java {
+            exclude("**/_old/**")
+        }
+    }
 }
