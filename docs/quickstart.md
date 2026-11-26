@@ -1,6 +1,6 @@
-# Quick Start
+# Quick Start Guide
 
-Get started with Wally SPSC ring buffer in 5 minutes.
+Get started with Wally SPSC ring buffer in 5 minutes. This guide assumes Java 22+ and basic knowledge of off-heap memory via FFM API.
 
 ## Installation
 

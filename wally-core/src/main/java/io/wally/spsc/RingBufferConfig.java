@@ -36,6 +36,9 @@ public final class RingBufferConfig {
     }
 
     public RingBufferConfig arena(Arena arena) {
+        if (arena == null) {
+            throw new NullPointerException("arena must not be null");
+        }
         this.arena = arena;
         return this;
     }

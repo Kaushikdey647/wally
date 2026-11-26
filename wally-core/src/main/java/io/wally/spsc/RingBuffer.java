@@ -96,14 +96,21 @@ public final class RingBuffer {
         @Override
         public boolean tryClaim(int length) {
             if (length <= 0) {
-                throw new IllegalArgumentException("length must be positive");
+                throw new IllegalArgumentException("length must be positive, was: " + length);
+            }
+
+            // Check overflow before alignment calculation
+            if (length > Integer.MAX_VALUE - HEADER_SIZE - ALIGNMENT) {
+                throw new MessageTooLargeException(length, capacity,
+                    "length would overflow frame size calculation");
             }
 
             // Frame = header (8 bytes: length + padding) + payload, aligned to 8 bytes
             int frameSize = HEADER_SIZE + io.wally.internal.memory.Align.align(length, ALIGNMENT);
 
             if (frameSize > capacity) {
-                throw new IllegalArgumentException("message too large: " + length + " bytes (capacity " + capacity + ")");
+                throw new MessageTooLargeException(length, capacity,
+                    "frame size " + frameSize + " exceeds capacity");
             }
 
             long tail = Mem.getLongAcquire(memory, tailOffset);
@@ -170,6 +177,22 @@ public final class RingBuffer {
 
         @Override
         public boolean write(byte[] src, int srcPos, int length) {
+            // Validate inputs
+            if (src == null) {
+                throw new NullPointerException("src array must not be null");
+            }
+            if (srcPos < 0) {
+                throw new IllegalArgumentException("srcPos must be non-negative, was: " + srcPos);
+            }
+            if (length < 0) {
+                throw new IllegalArgumentException("length must be non-negative, was: " + length);
+            }
+            if (srcPos + length > src.length) {
+                throw new IllegalArgumentException(
+                    String.format("srcPos (%d) + length (%d) exceeds array length (%d)",
+                        srcPos, length, src.length));
+            }
+
             if (!tryClaim(length)) {
                 return false;
             }
@@ -180,6 +203,22 @@ public final class RingBuffer {
 
         @Override
         public boolean write(MemorySegment src, long srcOffset, int length) {
+            // Validate inputs
+            if (src == null) {
+                throw new NullPointerException("src segment must not be null");
+            }
+            if (srcOffset < 0) {
+                throw new IllegalArgumentException("srcOffset must be non-negative, was: " + srcOffset);
+            }
+            if (length < 0) {
+                throw new IllegalArgumentException("length must be non-negative, was: " + length);
+            }
+            if (srcOffset + length > src.byteSize()) {
+                throw new IllegalArgumentException(
+                    String.format("srcOffset (%d) + length (%d) exceeds segment size (%d)",
+                        srcOffset, length, src.byteSize()));
+            }
+
             if (!tryClaim(length)) {
                 return false;
             }
@@ -196,8 +235,11 @@ public final class RingBuffer {
 
         @Override
         public int read(MessageHandler handler, int limit) {
+            if (handler == null) {
+                throw new NullPointerException("handler must not be null");
+            }
             if (limit <= 0) {
-                throw new IllegalArgumentException("limit must be positive");
+                throw new IllegalArgumentException("limit must be positive, was: " + limit);
             }
 
             int count = 0;
@@ -225,13 +267,18 @@ public final class RingBuffer {
                         continue;
                     }
 
-                    // Deliver message
-                    long payloadOffset = framePos + HEADER_SIZE;
-                    handler.onMessage(memory, payloadOffset, length, currentHead);
-
-                    // Advance to next aligned frame
+                    // Calculate next frame position
                     int frameSize = HEADER_SIZE + io.wally.internal.memory.Align.align(length, ALIGNMENT);
+
+                    // Advance currentHead BEFORE handler call
+                    // This ensures the finally block saves the advanced position even if handler throws
+                    long messageSequence = currentHead;
                     currentHead += frameSize;
+
+                    // Deliver message (use messageSequence which is the position of THIS message)
+                    long payloadOffset = framePos + HEADER_SIZE;
+                    handler.onMessage(memory, payloadOffset, length, messageSequence);
+
                     count++;
                 }
             } finally {
