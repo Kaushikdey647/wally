@@ -82,63 +82,58 @@ cursor = 300   → index = 44
 
 ```java
 boolean tryClaim(int length) {
-    // 1. Calculate frame size (aligned)
     int frameSize = HEADER_SIZE + align(length, 8);
-    
-    // 2. Get current tail position
-    long tail = getLongAcquire(memory, tailOffset);
+
+    long tail = this.tail;                 // writer owns tail: plain field, no atomic load
     int tailIndex = (int) (tail & mask);
-    
-    // 3. Check if frame fits before ring end
+
     if (tailIndex + frameSize > capacity) {
-        // Write sentinel and wrap
-        memory.set(JAVA_INT, dataOffset + tailIndex, 0);
-        tail = (tail & ~mask) + capacity;  // Next lap
+        // The gap [tail, nextLap) must be free before the sentinel is written,
+        // otherwise the sentinel could overwrite an unread frame's length.
+        long nextLap = (tail & ~mask) + capacity;
+        if (!hasSpace(nextLap)) return false;          // nothing written
+        data.set(JAVA_INT, tailIndex, 0);              // sentinel
+        this.tail = tail = nextLap;
         tailIndex = 0;
+        setLongRelease(memory, tailOffset, tail);      // publish the skip on its own
     }
-    
-    // 4. Check available space
-    long head = cachedHead;
-    if (tail + frameSize - head > capacity) {
-        head = getLongAcquire(memory, headOffset);  // Refresh
-        cachedHead = head;
-        if (tail + frameSize - head > capacity) {
-            return false;  // Still full
-        }
-    }
-    
-    // 5. Claim succeeded - store state
+
+    long newTail = tail + frameSize;
+    if (!hasSpace(newTail)) return false;              // nothing written
+    data.set(JAVA_INT, tailIndex, length);             // invisible until commit
     claimedTail = tail;
-    claimedLength = length;
-    
-    // 6. Write length field (uncommitted)
-    memory.set(JAVA_INT, dataOffset + tailIndex, length);
+    claimedNextTail = newTail;
     return true;
+}
+
+boolean hasSpace(long newTail) {
+    if (newTail - cachedHead <= capacity) return true;
+    cachedHead = getLongAcquire(memory, headOffset);   // refresh only when the cached value says full
+    return newTail - cachedHead <= capacity;
 }
 ```
 
 **Key points**:
-- **Cached head**: Writer caches the last-read head value. Only refreshes if space check fails. Reduces contention on head cursor.
-- **Sentinel**: Zero-length frame signals wrap point. Reader skips to next lap when encountering sentinel.
-- **Uncommitted state**: Length is written but cursor not advanced yet. Reader will not see this frame.
+- **Space check before any write**: The writer never writes to ring memory it has not proven free. An earlier version wrote the sentinel first; with mixed frame sizes and a full ring that zeroed the header of an unread frame, and the reader silently skipped the rest of the lap. `RingBufferWrapTest` reproduces that case.
+- **Skip published separately**: A frame that must wrap needs the reader to have consumed the gap at the end of the lap. Publishing the sentinel as its own tail update lets the reader move past it, so a frame larger than both the gap and `tailIndex` still gets placed once the reader catches up.
+- **Cached head**: The writer only performs an acquire load of `head` when the cached value says the ring is full.
+- **Uncommitted state**: The length is written but the tail is not advanced, so the reader cannot see the frame.
 
 ### Phase 2: Write Payload
 
 ```java
-// User writes directly into ring
-long payloadOffset = writer.offset();  // dataOffset + tailIndex + HEADER_SIZE
+long payloadOffset = writer.offset();  // index + HEADER_SIZE, relative to writer.buffer()
 writer.buffer().set(ValueLayout.JAVA_LONG, payloadOffset, value);
 ```
 
-**Zero-copy**: User writes directly into ring buffer memory. No intermediate buffers or copies.
+**Zero-copy**: `buffer()` is a slice of the data region (it excludes the cursors), created once at construction.
 
 ### Phase 3: Commit
 
 ```java
 void commit() {
-    int frameSize = HEADER_SIZE + align(claimedLength, 8);
-    long newTail = claimedTail + frameSize;
-    setLongRelease(memory, tailOffset, newTail);  // Publish
+    tail = claimedNextTail;
+    setLongRelease(memory, tailOffset, tail);  // publish
 }
 ```
 
@@ -149,49 +144,38 @@ void commit() {
 ```java
 int read(MessageHandler handler, int limit) {
     int count = 0;
-    long currentHead = head;  // Local copy
-    
-    while (count < limit) {
-        // 1. Get current tail position
-        long tail = getLongAcquire(memory, tailOffset);
-        if (currentHead >= tail) {
-            break;  // No more messages
+    long currentHead = head;
+    long tail = cachedTail;
+    try {
+        while (count < limit) {
+            if (currentHead >= tail) {
+                tail = getLongAcquire(memory, tailOffset);  // refresh only when the cached tail is exhausted
+                cachedTail = tail;
+                if (currentHead >= tail) break;
+            }
+            int headIndex = (int) (currentHead & mask);
+            int length = data.get(JAVA_INT, headIndex);
+            if (length == 0) {                                // sentinel
+                currentHead = (currentHead & ~mask) + capacity;
+                continue;
+            }
+            long position = currentHead;
+            currentHead += HEADER_SIZE + align(length, 8);   // advance before the callback
+            handler.onMessage(data, headIndex + HEADER_SIZE, length, position);
+            count++;
         }
-        
-        // 2. Calculate frame position
-        int headIndex = (int) (currentHead & mask);
-        long framePos = dataOffset + headIndex;
-        
-        // 3. Read length field
-        int length = memory.get(JAVA_INT, framePos);
-        
-        // 4. Handle sentinel (wrap marker)
-        if (length == 0) {
-            currentHead = (currentHead & ~mask) + capacity;  // Jump to next lap
-            continue;
-        }
-        
-        // 5. Deliver message
-        long payloadOffset = framePos + HEADER_SIZE;
-        handler.onMessage(memory, payloadOffset, length, currentHead);
-        
-        // 6. Advance to next frame
-        int frameSize = HEADER_SIZE + align(length, 8);
-        currentHead += frameSize;
-        count++;
+    } finally {
+        head = currentHead;
+        setLongRelease(memory, headOffset, currentHead);
     }
-    
-    // 7. Publish new head position
-    head = currentHead;
-    setLongRelease(memory, headOffset, currentHead);
     return count;
 }
 ```
 
 **Key points**:
-- **Acquire read of tail**: Synchronizes with writer's release write. Ensures payload is fully visible.
-- **Local head**: Read position kept in local variable until batch completes. Reduces memory traffic.
-- **Exception safety**: `finally` block ensures head is always published, even if handler throws.
+- **Acquire read of tail**: Synchronizes with the writer's release write, so every frame below the observed tail is fully visible. A batch reuses the observed tail and only reloads it once exhausted.
+- **Local head**: Read position kept in a local until the batch completes, then published once.
+- **Exception safety**: The `finally` block publishes the head even if a handler throws; the frame whose handler threw counts as consumed.
 
 ## Synchronization Protocol
 
@@ -239,7 +223,7 @@ public static void setLongRelease(MemorySegment seg, long offset, long value) {
 - **Acquire read**: Prevents reordering of subsequent reads before the acquire
 - Together: Establishes synchronization between threads
 
-**Hardware**: On x86-64, release/acquire compiles to plain MOV (TSO memory model provides stronger guarantees than JMM requires). On ARM, generates DMB instructions.
+**Hardware**: On x86-64, acquire loads and release stores compile to plain MOVs (TSO already provides the ordering). On AArch64, HotSpot emits LDAR/STLR.
 
 ## Space Management
 
@@ -279,23 +263,25 @@ No ambiguity between empty and full (unlike some ring buffer designs that need a
 When a frame doesn't fit at the end:
 
 ```
-Before wrap (tail = 230, capacity = 256):
+Before wrap (tail = 232, capacity = 256):
 ┌────────────────────────────────────────────────┐
-│ ... existing data ... │ 26 bytes free          │
+│ ... existing data ... │ 24 bytes free          │
 └────────────────────────────────────────────────┘
-                        ↑ tailIndex = 230
+                        ↑ tailIndex = 232
 
 Need 40-byte frame → doesn't fit
 ```
 
+The sentinel is only written once the writer has confirmed the reader already consumed `[232, 256)`; the new tail (256) is published immediately.
+
 ```
 After sentinel write:
 ┌────────────────────────────────────────────────┐
-│ ... existing data ... │ [0]│ 22 bytes unused   │
+│ ... existing data ... │ [0]│ 20 bytes unused   │
 └────────────────────────────────────────────────┘
                         ↑ sentinel
 
-Virtual cursor advanced: tail = (230 & ~255) + 256 = 256
+Virtual cursor advanced: tail = (232 & ~255) + 256 = 256
 Physical index: tailIndex = 256 & 255 = 0
 ```
 
@@ -381,6 +367,10 @@ Core 0 (Producer)                 Core 1 (Consumer)
 
 **With 128B padding**: Head and tail in separate cache lines (even with 128B prefetching). Cores can operate without invalidating each other's caches.
 
+### On-Heap Writer/Reader State
+
+The writer's private fields (`tail`, `claimedTail`, `claimedNextTail`, `cachedHead`) and the reader's (`head`, `cachedTail`) are written on every operation by different threads. The two objects are allocated back to back, so without padding they share a cache line (JOL: 40 + 32 bytes) and undo the off-heap cursor padding. Both classes use inheritance padding: 128 bytes of `long` fields in a superclass, the hot fields in a middle class, and 128 bytes in the subclass, because HotSpot lays out superclass fields first. `RingBufferLayoutTest` asserts the result with JOL; it already caught HotSpot packing an `int` field into the 4-byte gap after the object header, ahead of the padding.
+
 ### Spatial Locality
 
 Ring buffer data is contiguous. Sequential reads/writes benefit from:
@@ -398,7 +388,7 @@ Ring buffer data is contiguous. Sequential reads/writes benefit from:
 
 ```java
 if (frameSize > capacity) {
-    throw new IllegalArgumentException("message too large");
+    throw new MessageTooLargeException(length, capacity, "...");
 }
 ```
 
@@ -409,10 +399,10 @@ Minimum sensible capacity: `64` (one cache line).
 Limited by frame size fitting in ring:
 
 ```java
-maxMessageSize = capacity - HEADER_SIZE - 8;  // -8 for sentinel
+maxMessageSize = capacity - HEADER_SIZE;
 ```
 
-**Example**: 1 MB capacity → ~1 MB - 16 bytes max message.
+A frame of exactly `capacity` bytes can only be placed at index 0 with an empty ring, so the writer waits for the reader to drain fully first.
 
 ### Sentinel at Index 0
 
@@ -428,13 +418,7 @@ Equal case (`==`) does not write sentinel.
 
 ### Full Ring with Sentinel
 
-Sentinel occupies 4 bytes. This space counts against capacity:
-
-```
-Available space = capacity - (tail - head) - 4;  // If sentinel present
-```
-
-Writer accounts for this in space check before writing sentinel.
+The gap between the sentinel and the end of the lap counts as used space: the tail jumps to the next lap, so `tail - head` includes it until the reader skips past. No separate adjustment is needed.
 
 ### Overflow Protection
 
@@ -449,47 +433,9 @@ if (tail > Long.MAX_VALUE - frameSize) {
 
 Wally does not implement this (not needed for realistic workloads).
 
-## Performance Implications
+## Performance
 
-### Critical Path Analysis
-
-**Write path**:
-1. `getLongAcquire(tail)` - cache hit, ~2 cycles
-2. Mask and index calculation - ~1 cycle
-3. Space check - ~2 cycles (cache hit on head if recently read)
-4. Write length field - ~1 cycle
-5. User writes payload - variable
-6. `setLongRelease(tail)` - ~2 cycles
-
-**Total overhead**: ~8 cycles (~3ns @ 2.5 GHz), excluding payload write.
-
-**Read path**:
-1. `getLongAcquire(tail)` - cache hit, ~2 cycles
-2. Compare with head - ~1 cycle
-3. Mask and index calculation - ~1 cycle
-4. Read length field - ~1 cycle
-5. Handler callback - variable
-6. `setLongRelease(head)` - ~2 cycles
-
-**Total overhead**: ~7 cycles (~3ns), excluding handler execution.
-
-### Latency Breakdown
-
-Typical 50ns round-trip:
-- Write overhead: ~15ns (claim, commit, memory ordering)
-- Payload write (8 bytes): ~5ns
-- Consumer poll delay: ~10ns (depends on spin frequency)
-- Read overhead: ~15ns (acquire tail, read length, call handler)
-- Handler execution: ~5ns (read long, process)
-
-### Throughput Bottlenecks
-
-**Sustainable rate**: Limited by:
-1. Memory bandwidth: ~50 GB/s → ~1.5B 32-byte messages/sec (theoretical max)
-2. Cache misses: If ring > L3, latency increases to DRAM speed (~100ns)
-3. CPU frequency: ~3 GHz × 2 cores → ~6B instructions/sec / ~200 inst/msg → ~30M msgs/sec
-
-**Practical**: 20-25M msgs/sec sustained, 50M msgs/sec burst (small messages, hot cache).
+Measured numbers and methodology are in [Benchmarks](benchmarks.md).
 
 ## Implementation Trade-offs
 
@@ -542,8 +488,6 @@ Alternative: Wrap cursors at capacity.
 
 **Cost**: May claim space that was recently freed (brief full condition).
 
-**Measurement**: Reduces cache line bouncing by ~80% under load.
-
 ## Correctness Properties
 
 ### Safety Properties
@@ -556,19 +500,16 @@ Alternative: Wrap cursors at capacity.
 
 ### Liveness Properties
 
-1. **Progress**: Writer eventually succeeds if consumer drains
-2. **Wait-freedom** (reader): Consumer always makes progress (no blocking)
-3. **Obstruction-freedom** (writer): Writer makes progress if consumer active
-
-**Not lock-free**: Writer can be blocked by slow consumer (bounded capacity).
+1. **Bounded steps**: `tryClaim`, `commit` and `read` never block or retry internally; a full or empty ring returns immediately.
+2. **Writer progress**: Any frame up to `capacity` bytes is eventually placed once the reader drains enough space.
 
 ### Verification
 
-Tested via:
-- **Concurrent stress test**: 100K messages, verify sum (no drops, no corruption)
-- **Wrapping test**: Fill/drain multiple laps
-- **Epsilon GC**: Detects any allocation
-- **ThreadSanitizer** (future): Data race detection
+- **`RingBufferWrapTest`**: deterministic reproduction of the sentinel-overwrite case, plus 2M random-size messages across two threads with per-byte payload checks
+- **`RingBufferTest` / `EdgeCaseTest`**: protocol, wrapping, backpressure and argument validation
+- **`RingBufferLayoutTest`** (JOL): at least 128 bytes of padding around the writer and reader hot fields
+- **`ZeroAllocationTest`** (Epsilon GC, 128 MB heap): 50M write/read cycles without allocation
+- **jcstress** (`wally-stress`): a reader that sees a non-zero length sees the full payload, with and without a wrap
 
 ## References
 

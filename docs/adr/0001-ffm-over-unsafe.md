@@ -15,3 +15,6 @@ Target JDK 25 LTS and use the final Foreign Function & Memory API: `MemorySegmen
 - **−** Requires JDK 22+ (we pick 25 LTS). Excludes users stuck on 17/21.
 - **−** `asSlice()` allocates, so the API exposes `(segment, offset, length)` triples.
 - **−** Closing a shared arena while another thread is using it throws, so segment lifetime needs refcounting.
+
+## Update (SPSC ring)
+Wally is now an in-memory SPSC ring: no mapped files or `madvise`, and a single `Arena` owns the ring. Bytecode targets Java 22 (`--release 22`, built with JDK 25). `MemorySegment.asSlice()` is called once at construction to expose only the data region.

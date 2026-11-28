@@ -4,26 +4,38 @@ A high-performance, lock-free SPSC (Single Producer Single Consumer) circular bu
 
 ## Overview
 
-Wally provides a zero-allocation, cache-optimized ring buffer implementation using Java's Foreign Function & Memory (FFM) API for direct off-heap memory access. It achieves sub-50ns latencies through careful memory layout, acquire/release semantics, and elimination of garbage collection pressure.
+Wally provides a zero-allocation, cache-optimized ring buffer implementation using Java's Foreign Function & Memory (FFM) API for direct off-heap memory access. Measured numbers, with hardware and JDK, are in [Performance](#performance).
 
 **Key characteristics:**
 - **Lock-free**: Uses acquire/release memory ordering, no CAS loops or locks
 - **Zero allocation**: No objects created per message after warmup
-- **Cache-optimized**: 128-byte cursor padding prevents false sharing
+- **Cache-optimized**: 128-byte padding around the off-heap cursors and the on-heap writer/reader state prevents false sharing
 - **Power-of-two sizing**: Fast index calculation via bit masking
 - **Bounded**: Fixed capacity with explicit backpressure semantics
 
 ## Requirements
 
-- **Java 22+** (FFM API finalized in JEP 454)
+- **Java 22+** (FFM API finalized in JEP 454). Built with JDK 25 using `--release 22`.
 - **Platform**: x86-64 or AArch64 (little-endian architectures only)
 - **JVM**: HotSpot, GraalVM, or any JVM with FFM support
 
 ## Installation
 
-```gradle
+Wally is not published to any repository yet; the current version is `0.1.0-SNAPSHOT`. Build the jar:
+
+```bash
+./gradlew :wally-core:jar   # wally-core/build/libs/wally-core-0.1.0-SNAPSHOT.jar
+```
+
+Or consume it from another Gradle build with a composite build:
+
+```kotlin
+// settings.gradle.kts
+includeBuild("../wally")
+
+// build.gradle.kts
 dependencies {
-    implementation 'io.wally:wally-core:2.0.0'
+    implementation("io.wally:wally-core:0.1.0-SNAPSHOT")
 }
 ```
 
@@ -115,10 +127,12 @@ When a message doesn't fit at the end of the ring:
 └──────────────────────────────────────────────────┘
 ```
 
-1. Writer writes a **sentinel** (zero-length frame) at the current position
-2. Writer advances virtual cursor to the next lap: `cursor = (cursor & ~mask) + capacity`
-3. Writer places message at ring index 0
-4. Reader encounters sentinel, skips to index 0 of next lap
+1. Writer checks that the gap from the current position to the end of the ring is free (the reader has consumed it). If not, `tryClaim` returns `false` and writes nothing.
+2. Writer writes a **sentinel** (length 0) at the current position and publishes the tail at the next lap, `(cursor & ~mask) + capacity`.
+3. Writer checks space for the frame at ring index 0 and places it there.
+4. Reader encounters the sentinel and skips to index 0 of the next lap.
+
+The order matters: writing the sentinel before the space check could overwrite the length header of an unread frame when the ring is full, and the reader would skip the rest of that lap. Publishing the skip separately lets a frame that is larger than the remaining gap be placed once the reader catches up.
 
 **Virtual cursors**: Both head and tail are monotonically increasing 64-bit counters. Ring index is computed as `cursor & mask`. This avoids complex wrapping arithmetic and provides a natural sequence number.
 
@@ -150,8 +164,8 @@ Producer interface for writing messages into the ring.
 ```java
 public interface Writer {
     boolean tryClaim(int length)      // Reserve space
-    MemorySegment buffer()            // Get ring buffer memory
-    long offset()                     // Get payload offset
+    MemorySegment buffer()            // Data region (excludes cursors)
+    long offset()                     // Payload offset within buffer()
     int length()                      // Get claimed length
     void commit()                     // Publish message
     
@@ -191,7 +205,8 @@ writer.write(src, 0, length);
 **Guarantees**:
 - If `tryClaim(n)` returns `true`, space is reserved until `commit()`
 - After `commit()`, message is visible to reader with release semantics
-- Uncommitted claims are not visible (length field is set only on commit)
+- Uncommitted claims are not visible: the reader only reads frames below the published tail, and `commit()` is the only thing that publishes it
+- `length` must be positive (0 is the wrap sentinel); `write(...)` and `tryClaim(...)` both throw `IllegalArgumentException` otherwise
 
 ### Reader
 
@@ -200,8 +215,8 @@ Consumer interface for reading messages from the ring.
 ```java
 public interface Reader {
     int read(MessageHandler handler, int limit)
-    long available()
-    long sequence()
+    long available()   // committed bytes not yet read (headers, padding and wrap gaps included)
+    long sequence()    // byte position of the next frame
 }
 ```
 
@@ -214,7 +229,7 @@ public interface Reader {
 **Guarantees**:
 - Messages delivered in FIFO order
 - Each message delivered exactly once
-- Read position advanced atomically after handler completes (even on exception)
+- A message counts as consumed once its handler is called, even if the handler throws; the head is published when `read` returns
 
 ### MessageHandler
 
@@ -228,10 +243,10 @@ public interface MessageHandler {
 ```
 
 **Parameters**:
-- `buffer`: Ring buffer memory (valid only during callback)
-- `offset`: Byte offset where payload starts
+- `buffer`: Ring data region (valid only during callback)
+- `offset`: Byte offset within `buffer` where payload starts
 - `length`: Actual payload length (not padded frame size)
-- `sequence`: Monotonic sequence number starting from 0
+- `sequence`: Byte position of the frame; monotonic from 0, not a contiguous message counter
 
 **Zero-allocation pattern**:
 ```java
@@ -254,14 +269,12 @@ Configuration builder for ring buffer creation.
 ```java
 public final class RingBufferConfig {
     public RingBufferConfig capacity(int bytes)       // Must be power of 2
-    public RingBufferConfig alignment(int bytes)      // Memory alignment
     public RingBufferConfig arena(Arena arena)        // Memory arena
 }
 ```
 
 **Defaults**:
 - Capacity: 1 MB
-- Alignment: 64 bytes (cache line)
 - Arena: `Arena.ofAuto()` (GC cleanup)
 
 **Capacity selection**: Choose based on:
@@ -300,46 +313,28 @@ Mem.setLongRelease(memory, offset, value);  // Producer publishes
 Mem.getLongAcquire(memory, offset);         // Consumer observes
 ```
 
-## Performance Characteristics
+## Performance
 
-### Latency
+Measured 1P1C (one producer thread, one consumer thread) on an Apple M4 Pro, macOS 26.4.1 without core pinning, OpenJDK 25.0.5 (Temurin). Raw outputs are in [`wally-bench/results/`](wally-bench/results/); methodology is in [docs/benchmarks.md](docs/benchmarks.md).
 
-| Operation | Typical | p99 | Notes |
-|-----------|---------|-----|-------|
-| `tryClaim()` | 15-25ns | 40ns | Includes space check |
-| `commit()` | 10-15ns | 25ns | Release write of cursor |
-| `read()` (per msg) | 15-25ns | 40ns | With zero-alloc handler |
-| Write + read round-trip | 40-60ns | 100ns | Same core pair |
+**Throughput** (JMH `@Group`, one message per call, 3 forks):
 
-**Measurement**: Intel Xeon Platinum 8259CL @ 2.5GHz, isolated cores, TSC timing.
+| Queue | Throughput | ns/msg | Allocation |
+|---|---|---|---|
+| Wally (32-byte payload) | 73.5M msgs/s | 13.6 | ≈ 0 B/op |
+| JCTools `SpscArrayQueue` (object reference) | 399.4M msgs/s | 2.5 | ≈ 0 B/op |
+| `ArrayBlockingQueue` (object reference) | 19.7M msgs/s | 50.7 | 2.8 B/op |
 
-### Throughput
+**One-way latency** at a fixed 1M msgs/s, stamped with intended send time (HdrHistogram, 20M samples):
 
-| Workload | Throughput | Notes |
-|----------|------------|-------|
-| 32-byte messages | 25M msgs/sec | Sustained |
-| 256-byte messages | 18M msgs/sec | Cache pressure |
-| Mixed sizes (8-128B) | 20M msgs/sec | Realistic |
+| Queue | p50 | p99 | p99.9 |
+|---|---|---|---|
+| Wally | 83 ns | 458 ns | 24.2 µs |
+| JCTools `SpscArrayQueue` | 84 ns | 334 ns | 13.1 µs |
 
-**Bottleneck**: Typically memory bandwidth or false sharing if cores not properly isolated.
+On this machine `System.nanoTime()` has about 42 ns resolution, and tails above p99 are dominated by the unpinned OS scheduler. JCTools is faster per message because it signals through the slot rather than a shared cursor and passes a reference instead of copying a payload; see [docs/benchmarks.md](docs/benchmarks.md#throughput).
 
-### Allocation
-
-**After warmup**: 0.0001 bytes/operation (JMH gc profiler)
-
-**Warmup requirements**:
-- JIT compilation: 10K-50K operations
-- Class loading: First few hundred operations
-- Lambda capture: Use pre-allocated handlers
-
-**Verification**:
-```bash
-# ThreadMXBean allocation tracking
-./gradlew :wally-core:test --tests SPSCZeroAllocationTest
-
-# Epsilon GC (exhausts heap if any per-op allocation)
-./gradlew :wally-core:epsilonTest
-```
+**Allocation**: zero per message after warmup, enforced by `ZeroAllocationTest` (50M cycles under Epsilon GC, 128 MB heap) in `./gradlew check`.
 
 ## Usage Patterns
 
@@ -438,17 +433,6 @@ Pin producer and consumer to separate cores (preferably on same NUMA node):
 taskset -c 4 java -cp ... ProducerMain &
 taskset -c 5 java -cp ... ConsumerMain &
 
-# Or use Thread.setAffinity() via JNI/FFM
-```
-
-### Huge Pages
-
-Allocate ring from huge pages for TLB efficiency:
-
-```java
-// Requires OS configuration: sysctl vm.nr_hugepages=128
-Arena arena = Arena.ofConfined();
-MemorySegment huge = arena.allocate(capacity, 2 * 1024 * 1024);  // 2MB alignment
 ```
 
 ### JVM Flags
@@ -476,20 +460,17 @@ int capacity = nextPowerOfTwo(frameSize * burstSize * 2);  // 2x safety margin
 ## Benchmarking
 
 ```bash
-# Throughput: operations per second
-./gradlew :wally-bench:jmh \
-  -Pjmh.include=SPSCThroughput \
-  -Pjmh.wi=3 -Pjmh.i=5 -Pjmh.f=1
+# 1P1C throughput (Wally, JCTools SpscArrayQueue, ArrayBlockingQueue) with allocation profiling
+./gradlew :wally-bench:jmh -Pjmh.profilers=gc        # -> wally-bench/results/jmh-throughput.json
 
-# Latency: nanoseconds (p50, p99, p999)
-./gradlew :wally-bench:jmh \
-  -Pjmh.include=SPSCLatency \
-  -Pjmh.wi=5 -Pjmh.i=10 -Pjmh.f=1
+# 1P1C one-way latency at a fixed offered rate (HdrHistogram, coordinated-omission safe)
+./gradlew :wally-bench:latency -Prate=1000000        # -> wally-bench/results/latency-*.hgrm
 
-# Zero allocation verification
-./gradlew :wally-bench:jmh \
-  -Pjmh.include=SPSCZeroAllocation \
-  -Pjmh.profilers=gc
+# Zero allocation: 50M write/read cycles under Epsilon GC with a 128 MB heap (part of check)
+./gradlew :wally-core:epsilonTest
+
+# Memory ordering (jcstress)
+./gradlew :wally-stress:jcstress -Pjcstress.args="-m default"
 ```
 
 ## Troubleshooting
@@ -534,18 +515,6 @@ Wally guarantees `writer.offset()` is always 8-byte aligned.
 - **In-memory only**: No persistence. For durable queues, see Chronicle Queue.
 - **Little-endian**: x86-64, AArch64. No big-endian support.
 - **No transactions**: Messages visible immediately after commit.
-
-## Comparison with Alternatives
-
-| Library | SPSC Latency | MPSC Support | Persistence | Allocation |
-|---------|--------------|--------------|-------------|------------|
-| **Wally** | **~40ns** | ❌ | ❌ | **0** |
-| Disruptor | ~60ns | ✅ | ❌ | 0* |
-| JCTools | ~50ns | ✅ | ❌ | 0* |
-| ArrayBlockingQueue | ~200ns | ✅ | ❌ | 48B/msg |
-| Chronicle Queue | ~200ns | ✅ | ✅ | Varies |
-
-*After warmup with pre-allocated objects
 
 ## License
 

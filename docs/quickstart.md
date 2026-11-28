@@ -4,11 +4,15 @@ Get started with Wally SPSC ring buffer in 5 minutes. This guide assumes Java 22
 
 ## Installation
 
-Add to your `build.gradle.kts`:
+Wally is not published yet (current version `0.1.0-SNAPSHOT`). Use a composite build:
 
 ```kotlin
+// settings.gradle.kts
+includeBuild("../wally")
+
+// build.gradle.kts
 dependencies {
-    implementation("io.wally:wally-core:1.0.0")
+    implementation("io.wally:wally-core:0.1.0-SNAPSHOT")
 }
 ```
 
@@ -22,7 +26,6 @@ import io.wally.spsc.*;
 RingBuffer ring = new RingBuffer(
     new RingBufferConfig()
         .capacity(1024 * 1024)  // 1 MB, must be power of 2
-        .alignment(64)          // Cache-line alignment
 );
 
 Writer writer = ring.writer();  // Use from producer thread only
@@ -216,6 +219,5 @@ int read = reader.read(handler, Integer.MAX_VALUE);
 
 ## Next Steps
 
-- [How It Works](how-it-works.md) - Deep dive into implementation
-- [Benchmarks](benchmarks.md) - Performance measurements
-- [Trading Examples](examples.md) - Real-world use cases
+- [Implementation](implementation.md) - Memory layout, claim/commit protocol, wrapping
+- [Benchmarks](benchmarks.md) - Methodology and measured results

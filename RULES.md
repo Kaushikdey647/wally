@@ -15,9 +15,8 @@
    - Commit often, with clear messages
    - Reference the issue number in commits where relevant: `fixes #123` or `part of #123`
    - **Update documentation with each change**: when you add/modify code, update the relevant docs in the same commit or immediately after
-     - New API → update `docs/concepts.md` or create new guide pages
+     - New API → update `docs/quickstart.md` and `README.md`
      - Changed behavior → update affected doc pages
-     - New milestone features → update `docs/roadmap.md` to mark progress
      - Design decisions → add or update ADRs in `docs/adr/`
      - Keep `README.md` current with the latest status
 
@@ -48,7 +47,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 
 - `feat(m1): add SegmentFile with mmap and refcounting`
 - `test: add jqwik model test for rollover`
-- `docs: update roadmap with M1 results`
+- `docs: record 1P1C benchmark results`
 
 ## Documentation discipline
 
@@ -58,12 +57,10 @@ When you write code, update the docs in the same commit or the very next one:
 
 | You changed... | Update these docs |
 |---|---|
-| Public API (`io.wally.api`) | `docs/concepts.md`, add usage examples, update quickstart if it exists |
-| Internal behavior (framing, segment rolling, recovery) | Relevant pages in `docs/`, ensure accuracy |
-| File format (header, record layout) | `docs/format.md` and `docs/record-layout.md` |
-| Durability or concurrency semantics | `docs/guarantees.md`, `docs/how-it-works.md` |
+| Public API (`io.wally.spsc`) | `docs/quickstart.md`, `README.md` API section |
+| Internal behavior (framing, wrapping, cursors) or memory ordering | `docs/implementation.md` |
+| Performance | Re-run benchmarks, commit `wally-bench/results/`, update `docs/benchmarks.md` and `README.md` |
 | Design decision | Add or update an ADR in `docs/adr/` |
-| Milestone progress | Mark checkboxes or update status in `docs/roadmap.md` |
 | Overall status or quick-start | `README.md` |
 
 **Why:** Docs that lag behind code become wrong, and wrong docs are worse than no docs. Keeping them in sync as you go is cheaper than a big docs sprint later.
