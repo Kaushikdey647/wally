@@ -14,6 +14,13 @@ subprojects {
             options.compilerArgs.add("-Xlint:all,-processing")
         }
         tasks.named<JavaCompile>("compileJava") { options.compilerArgs.add("-Werror") }
-        tasks.withType<Test>().configureEach { useJUnitPlatform() }
+        tasks.withType<Test>().configureEach {
+            useJUnitPlatform()
+            timeout = java.time.Duration.ofMinutes(10)
+            testLogging {
+                events("passed", "skipped", "failed")
+                exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+            }
+        }
     }
 }

@@ -11,6 +11,8 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform { excludeTags("epsilon") }
+    // JOL otherwise forks a Serviceability Agent attach to this JVM, which can block on CI runners.
+    systemProperty("jol.skipHotspotSAAttach", "true")
 }
 
 // Steady-state loop under Epsilon GC: any per-op allocation exhausts the small heap and fails the run.

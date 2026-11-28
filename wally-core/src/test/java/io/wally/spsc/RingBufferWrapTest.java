@@ -80,6 +80,7 @@ class RingBufferWrapTest {
                 failure.set(t);
             }
         });
+        consumer.setDaemon(true);
         consumer.start();
 
         SplittableRandom sizes = new SplittableRandom(seed);

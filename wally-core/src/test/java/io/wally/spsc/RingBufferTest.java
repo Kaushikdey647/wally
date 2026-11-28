@@ -126,6 +126,7 @@ class RingBufferTest {
             }
             latch.countDown();
         });
+        consumer.setDaemon(true);
         consumer.start();
 
         // Producer thread (main)
