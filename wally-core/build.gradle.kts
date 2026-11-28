@@ -25,12 +25,3 @@ val epsilonTest = tasks.register<Test>("epsilonTest") {
 }
 
 tasks.check { dependsOn(epsilonTest) }
-
-// Exclude old WAL tests from compilation and execution
-sourceSets {
-    test {
-        java {
-            exclude("**/_old/**")
-        }
-    }
-}
