@@ -6,12 +6,12 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="High-throughput, zero-allocation off-heap hybrid WAL & event queue for Java">
+        <meta name="description" content="Lock-free, zero-allocation off-heap SPSC ring buffer for Java">
       
       
       
       
-        <link rel="prev" href="../roadmap/">
+        <link rel="prev" href="../implementation/">
       
       
         <link rel="next" href="../adr/0001-ffm-over-unsafe/">
@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
     
     
       
@@ -290,130 +290,15 @@
   
   
   
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Start here
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Start here
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
     <li class="md-nav__item">
-      <a href="../how-it-works/" class="md-nav__link">
+      <a href="../quickstart/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    How Wally works
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../glossary/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Glossary
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../concepts/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Concepts
+    Quick start
   
 
     
@@ -433,184 +318,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../record-layout/" class="md-nav__link">
+      <a href="../implementation/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Record layout
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
-        
-          
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Design
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Design
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../design/blueprint/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Blueprint
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../format/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    File format
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../guarantees/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Guarantees
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../roadmap/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Roadmap
+    Implementation
   
 
     
@@ -690,10 +405,43 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#methodology" class="md-nav__link">
+  <a href="#environment" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Methodology
+        Environment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#throughput" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Throughput
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#latency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Latency
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#allocation-and-correctness-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Allocation and correctness checks
       
     </span>
   </a>
@@ -705,17 +453,6 @@
     <span class="md-ellipsis">
       
         Reproduce
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#m0-single-thread-append-read" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        M0: single-thread append + read
       
     </span>
   </a>
@@ -750,10 +487,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
             
   
   
@@ -771,8 +508,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_8">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -817,14 +554,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../adr/0002-position-addressing/" class="md-nav__link">
+      <a href="../adr/0002-variable-length-frames/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    0002 Position addressing
+    0002 Variable-length frames
   
 
     
@@ -845,14 +582,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../adr/0003-claim-commit-protocol/" class="md-nav__link">
+      <a href="../adr/0003-claim-commit-acquire-release/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    0003 Claim/commit protocol
+    0003 Claim/commit and acquire/release
   
 
     
@@ -873,14 +610,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../adr/0004-fetch-add-tail/" class="md-nav__link">
+      <a href="../adr/0004-wrap-sentinel-ordering/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    0004 Fetch-add tail
+    0004 Wrap sentinel ordering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0005-false-sharing-padding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0005 False-sharing padding
   
 
     
@@ -928,10 +693,43 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#methodology" class="md-nav__link">
+  <a href="#environment" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Methodology
+        Environment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#throughput" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Throughput
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#latency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Latency
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#allocation-and-correctness-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Allocation and correctness checks
       
     </span>
   </a>
@@ -943,17 +741,6 @@
     <span class="md-ellipsis">
       
         Reproduce
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#m0-single-thread-append-read" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        M0: single-thread append + read
       
     </span>
   </a>
@@ -981,62 +768,121 @@
 
 
 <h1 id="benchmarks">Benchmarks<a class="headerlink" href="#benchmarks" title="Permanent link">&para;</a></h1>
-<h2 id="methodology">Methodology<a class="headerlink" href="#methodology" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>Harness</strong>: JMH for throughput; a fixed-rate driver + HdrHistogram for latency (from M2), to avoid coordinated omission.</li>
-<li><strong>Scenarios</strong>: 1P1C and NP1C (N = 1, 2, 4, 8); payloads 32 B, 256 B, 4 KB; flush policies <code>none</code>, <code>periodic(1ms/5ms)</code>, <code>sync</code>.</li>
-<li><strong>Baselines</strong>: <code>ArrayBlockingQueue</code>, JCTools MPSC, LMAX Disruptor, Chronicle Queue.</li>
-<li><strong>Allocation</strong>: JMH <code>-prof gc</code> (<code>gc.alloc.rate.norm</code>) and an Epsilon GC run.</li>
-<li><strong>Environment</strong>: record CPU, kernel, JDK, JVM flags, core pinning. Publish raw data and the script that produced it.</li>
-</ul>
-<h2 id="reproduce">Reproduce<a class="headerlink" href="#reproduce" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>./gradlew<span class="w"> </span>:wally-bench:jmh<span class="w"> </span>-Pjmh.profilers<span class="o">=</span>gc
-</code></pre></div>
-<h2 id="m0-single-thread-append-read">M0: single-thread append + read<a class="headerlink" href="#m0-single-thread-append-read" title="Permanent link">&para;</a></h2>
-<p><code>SegmentLogBenchmark</code>: one thread appends a record and reads it back. Measures the raw cost of framing, the release/acquire publish and the copy, plus allocation.</p>
-<p><strong>Environment:</strong> Apple M4 Pro, macOS 26.4.1, Temurin 25.0.5, JMH 1.37, 1 fork, 3×1 s warmup, 5×1 s measurement, laptop (no core pinning).</p>
+<p>All numbers are 1P1C: one producer thread and one consumer thread running concurrently. Raw outputs are checked in under <a href="https://github.com/kaushikdey647/wally/tree/main/wally-bench/results"><code>wally-bench/results/</code></a>.</p>
+<h2 id="environment">Environment<a class="headerlink" href="#environment" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Benchmark</th>
-<th>32 B</th>
-<th>256 B</th>
-<th>4 KB</th>
-<th>Allocation</th>
+<th></th>
+<th></th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>wallyClaimCommitRead</code> (zero copy)</td>
-<td>5.95 ns</td>
-<td>8.52 ns</td>
-<td>42.3 ns</td>
-<td>≈ 0 B/op</td>
+<td>CPU</td>
+<td>Apple M4 Pro, 14 cores (10 performance + 4 efficiency)</td>
 </tr>
 <tr>
-<td><code>wallyAppendRead</code> (copy in)</td>
-<td>7.79 ns</td>
-<td>12.5 ns</td>
-<td>103 ns</td>
-<td>≈ 0 B/op</td>
+<td>Memory</td>
+<td>24 GB</td>
 </tr>
 <tr>
-<td><code>arrayBlockingQueueOfferPoll</code> (new <code>byte[]</code> per message)</td>
-<td>10.1 ns</td>
-<td>11.6 ns</td>
-<td>91.2 ns</td>
-<td>payload + 16 B/op</td>
+<td>OS</td>
+<td>macOS 26.4.1, no core pinning or isolation (macOS has no thread affinity API)</td>
+</tr>
+<tr>
+<td>JDK</td>
+<td>OpenJDK 25.0.5+8-LTS (Temurin), default flags; latency runs add <code>-Xms1g -Xmx1g -XX:+AlwaysPreTouch</code></td>
+</tr>
+<tr>
+<td>JMH</td>
+<td>1.37</td>
 </tr>
 </tbody>
 </table>
-<div class="admonition warning">
-<p class="admonition-title">How to read these numbers</p>
+<h2 id="throughput">Throughput<a class="headerlink" href="#throughput" title="Permanent link">&para;</a></h2>
+<p><code>SpscThroughputBenchmark</code>: JMH <code>@Group</code> with one <code>offer</code> thread and one <code>poll</code> thread, both non-blocking, one message per call. Score is messages handed from producer to consumer per second (<code>polled</code> counter). 3 forks × 5 × 1 s measurement after 5 × 1 s warmup.</p>
+<table>
+<thead>
+<tr>
+<th>Queue</th>
+<th>Payload</th>
+<th>Throughput (msgs/s)</th>
+<th>ns per message</th>
+<th>Allocation (B/op)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wally <code>RingBuffer</code> (1 MB ring)</td>
+<td>32-byte frame payload, written into the ring</td>
+<td>73.5M ± 3.2M</td>
+<td>13.6</td>
+<td>≈ 0</td>
+</tr>
+<tr>
+<td>JCTools <code>SpscArrayQueue</code> (32K slots)</td>
+<td>preallocated object reference</td>
+<td>399.4M ± 17.5M</td>
+<td>2.5</td>
+<td>≈ 0</td>
+</tr>
+<tr>
+<td><code>ArrayBlockingQueue</code> (32K slots)</td>
+<td>preallocated object reference</td>
+<td>19.7M ± 8.0M</td>
+<td>50.7</td>
+<td>2.8 ± 3.1</td>
+</tr>
+</tbody>
+</table>
+<p>Wally is about 3.7x faster than <code>ArrayBlockingQueue</code> and about 5.4x slower than JCTools in this per-message test. The comparison is not like for like: JCTools moves a 4-byte reference and signals through the slot itself (null/non-null), so producer and consumer never write a shared cursor. Wally copies a payload and, with <code>read(handler, 1)</code>, publishes the head cursor with a release store on every message, which moves that cache line to the consumer core and back each time. Larger read batches amortize the head store.</p>
+<h2 id="latency">Latency<a class="headerlink" href="#latency" title="Permanent link">&para;</a></h2>
+<p><code>SpscLatency</code>: the producer offers 1M msgs/s at a fixed schedule and stamps each message with its <em>intended</em> send time, so stalls and full-queue waits count as latency (no coordinated omission). The consumer busy-polls and records <code>System.nanoTime() - stamp</code> into an HdrHistogram. 5 s warmup, then 20 s (20M messages) measured.</p>
+<table>
+<thead>
+<tr>
+<th>Queue</th>
+<th>p50</th>
+<th>p99</th>
+<th>p99.9</th>
+<th>p99.99</th>
+<th>max</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wally</td>
+<td>83 ns</td>
+<td>458 ns</td>
+<td>24.2 µs</td>
+<td>737 µs</td>
+<td>1.78 ms</td>
+</tr>
+<tr>
+<td>JCTools <code>SpscArrayQueue</code></td>
+<td>84 ns</td>
+<td>334 ns</td>
+<td>13.1 µs</td>
+<td>572 µs</td>
+<td>1.66 ms</td>
+</tr>
+</tbody>
+</table>
+<p>Read these with care:</p>
 <ul>
-<li>Single-threaded, so there is no lock contention. <code>ArrayBlockingQueue</code>'s real cost appears under contention and as GC pressure over time. Those effects show up in the cross-thread benchmarks (M2).</li>
-<li>The 1 MB benchmark buffer is re-zeroed when full. At 4 KB that happens every ~255 records and inflates the Wally numbers. In the real log, new segments are zeroed ahead of time by the preallocator (M1).</li>
-<li>Laptop numbers. Reference results will come from dedicated Linux hardware.</li>
+<li><code>System.nanoTime()</code> on Apple Silicon ticks at 24 MHz, about 42 ns per tick, so the p50 values carry ±42 ns quantization.</li>
+<li>Everything above p99 is dominated by the OS scheduler on an unpinned macOS laptop. Neither number above p99 should be cited as a property of the queue.</li>
 </ul>
-</div>
+<h2 id="allocation-and-correctness-checks">Allocation and correctness checks<a class="headerlink" href="#allocation-and-correctness-checks" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>ZeroAllocationTest</code> runs 50M write/read cycles under Epsilon GC with a 128 MB heap as part of <code>./gradlew check</code>; any per-op allocation fails it with <code>OutOfMemoryError</code>.</li>
+<li>jcstress (<code>./gradlew :wally-stress:jcstress -Pjcstress.args="-m default"</code>): 68/68 configurations passed for the plain and wrap-sentinel publication tests.</li>
+</ul>
+<h2 id="reproduce">Reproduce<a class="headerlink" href="#reproduce" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>./gradlew<span class="w"> </span>:wally-bench:jmh<span class="w"> </span>-Pjmh.profilers<span class="o">=</span>gc<span class="w">   </span><span class="c1"># wally-bench/results/jmh-throughput.json</span>
+./gradlew<span class="w"> </span>:wally-bench:latency<span class="w">                  </span><span class="c1"># wally-bench/results/latency-*.hgrm</span>
+</code></pre></div>
 
 
 
@@ -1095,7 +941,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "search.suggest"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
+      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
     
   </body>

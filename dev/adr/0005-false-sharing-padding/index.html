@@ -6,33 +6,31 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="High-throughput, zero-allocation off-heap hybrid WAL & event queue for Java">
+        <meta name="description" content="Lock-free, zero-allocation off-heap SPSC ring buffer for Java">
       
       
       
       
-        <link rel="prev" href="../design/blueprint/">
+        <link rel="prev" href="../0004-wrap-sentinel-ordering/">
       
-      
-        <link rel="next" href="../guarantees/">
       
       
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
     
     
       
-        <title>File format - Wally</title>
+        <title>0005 False-sharing padding - Wally</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -51,7 +49,7 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#file-format" class="md-skip">
+        <a href="#adr-0005-pad-both-off-heap-cursors-and-on-heap-writerreader-state" class="md-skip">
           Skip to content
         </a>
       
@@ -96,7 +94,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="Wally" class="md-header__button md-logo" aria-label="Wally" data-md-component="logo">
+    <a href="../.." title="Wally" class="md-header__button md-logo" aria-label="Wally" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -116,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              File format
+              0005 False-sharing padding
             
           </span>
         </div>
@@ -234,7 +232,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="Wally" class="md-nav__button md-logo" aria-label="Wally" data-md-component="logo">
+    <a href="../.." title="Wally" class="md-nav__button md-logo" aria-label="Wally" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -264,7 +262,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -290,130 +288,15 @@
   
   
   
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Start here
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Start here
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
     <li class="md-nav__item">
-      <a href="../how-it-works/" class="md-nav__link">
+      <a href="../../quickstart/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    How Wally works
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../glossary/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Glossary
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../concepts/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Concepts
+    Quick start
   
 
     
@@ -433,14 +316,41 @@
   
   
     <li class="md-nav__item">
-      <a href="../record-layout/" class="md-nav__link">
+      <a href="../../implementation/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Record layout
+    Implementation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
   
 
     
@@ -485,7 +395,7 @@
   <span class="md-ellipsis">
     
   
-    Design
+    ADRs
   
 
     
@@ -501,7 +411,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Design
+    ADRs
   
 
           </label>
@@ -514,14 +424,98 @@
   
   
     <li class="md-nav__item">
-      <a href="../design/blueprint/" class="md-nav__link">
+      <a href="../0001-ffm-over-unsafe/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Blueprint
+    0001 FFM over Unsafe
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0002-variable-length-frames/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0002 Variable-length frames
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0003-claim-commit-acquire-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0003 Claim/commit and acquire/release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0004-wrap-sentinel-ordering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0004 Wrap sentinel ordering
   
 
     
@@ -558,7 +552,7 @@
   <span class="md-ellipsis">
     
   
-    File format
+    0005 False-sharing padding
   
 
     
@@ -576,7 +570,7 @@
   <span class="md-ellipsis">
     
   
-    File format
+    0005 False-sharing padding
   
 
     
@@ -602,38 +596,32 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#segment-file" class="md-nav__link">
+  <a href="#context" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Segment file
+        Context
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Segment file">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#segment-header-64-b" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Segment header (64 B)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#record-starts-at-a-multiple-of-8" class="md-nav__link">
+  <a href="#decision" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Record (starts at a multiple of 8)
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
       
     </span>
   </a>
@@ -644,259 +632,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../guarantees/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Guarantees
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../roadmap/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Roadmap
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../benchmarks/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Benchmarks
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
-        
-          
-          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    ADRs
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_8">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    ADRs
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../adr/0001-ffm-over-unsafe/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    0001 FFM over Unsafe
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../adr/0002-position-addressing/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    0002 Position addressing
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../adr/0003-claim-commit-protocol/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    0003 Claim/commit protocol
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../adr/0004-fetch-add-tail/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    0004 Fetch-add tail
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -936,38 +671,32 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#segment-file" class="md-nav__link">
+  <a href="#context" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Segment file
+        Context
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Segment file">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#segment-header-64-b" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Segment header (64 B)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#record-starts-at-a-multiple-of-8" class="md-nav__link">
+  <a href="#decision" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Record (starts at a multiple of 8)
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
       
     </span>
   </a>
@@ -994,107 +723,25 @@
   
 
 
-<h1 id="file-format">File format<a class="headerlink" href="#file-format" title="Permanent link">&para;</a></h1>
-<div class="admonition info">
-<p class="admonition-title">Draft</p>
-<p>Finalized in M1. All integers are little-endian. Format version: 1.</p>
-</div>
-<h2 id="segment-file">Segment file<a class="headerlink" href="#segment-file" title="Permanent link">&para;</a></h2>
-<p>Name: <code>%020d.wly</code> (segment index, zero-padded). Size: fixed <code>segmentSize</code> (power of two).</p>
-<h3 id="segment-header-64-b">Segment header (64 B)<a class="headerlink" href="#segment-header-64-b" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Offset</th>
-<th>Size</th>
-<th>Field</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>0</td>
-<td>6</td>
-<td>magic <code>WALLY\0</code></td>
-</tr>
-<tr>
-<td>6</td>
-<td>2</td>
-<td>format version</td>
-</tr>
-<tr>
-<td>8</td>
-<td>8</td>
-<td>segment size</td>
-</tr>
-<tr>
-<td>16</td>
-<td>8</td>
-<td>base position (<code>segmentIndex * segmentSize</code>)</td>
-</tr>
-<tr>
-<td>24</td>
-<td>36</td>
-<td>reserved (zero)</td>
-</tr>
-<tr>
-<td>60</td>
-<td>4</td>
-<td>CRC32C of bytes 0–59</td>
-</tr>
-</tbody>
-</table>
-<h2 id="record-starts-at-a-multiple-of-8">Record (starts at a multiple of 8)<a class="headerlink" href="#record-starts-at-a-multiple-of-8" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Offset</th>
-<th>Size</th>
-<th>Field</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>0</td>
-<td>4</td>
-<td><code>frameLength</code>: header + payload bytes (unaligned); <code>0</code> = uncommitted. Written last, with release semantics.</td>
-</tr>
-<tr>
-<td>4</td>
-<td>2</td>
-<td><code>type</code>: <code>1</code> = DATA, <code>2</code> = PADDING</td>
-</tr>
-<tr>
-<td>6</td>
-<td>2</td>
-<td><code>flags</code></td>
-</tr>
-<tr>
-<td>8</td>
-<td>4</td>
-<td>CRC32C of the payload (0 when <code>ChecksumMode.NONE</code>)</td>
-</tr>
-<tr>
-<td>12</td>
-<td>4</td>
-<td>reserved</td>
-</tr>
-<tr>
-<td>16</td>
-<td><code>frameLength - 16</code></td>
-<td>payload</td>
-</tr>
-<tr>
-<td>—</td>
-<td>0–7</td>
-<td>alignment padding to the next multiple of 8</td>
-</tr>
-</tbody>
-</table>
-<p>A <code>PADDING</code> frame fills the remainder of a segment when the next record doesn't fit, and replaces aborted claims. It only uses <code>frameLength</code> and <code>type</code>, so it can be as short as 8 bytes. Because frames and segment ends are 8-aligned, the gap to fill is never smaller than that.</p>
-<div class="admonition note">
-<p class="admonition-title">Why the frame length includes the header</p>
-<p>A payload-length field would make a header-only padding frame encode as <code>0</code>, which already means "uncommitted".</p>
-</div>
+<h1 id="adr-0005-pad-both-off-heap-cursors-and-on-heap-writerreader-state">ADR 0005: Pad both off-heap cursors and on-heap writer/reader state<a class="headerlink" href="#adr-0005-pad-both-off-heap-cursors-and-on-heap-writerreader-state" title="Permanent link">&para;</a></h1>
+<p><strong>Status:</strong> Accepted · <strong>Date:</strong> 2026-11-28</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>The producer writes <code>tail</code> and its private claim state on every message; the consumer writes <code>head</code> and its cached tail. If any of these share a cache line, each write invalidates the other core's copy.</p>
+<p>Padding only the off-heap cursors is not enough. The writer and reader objects are allocated back to back (JOL: 40 and 32 bytes), so their hot fields can sit in the same heap cache line.</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Off-heap:</strong> <code>head</code> and <code>tail</code> each sit in their own 128-byte block (two 64-byte lines, covering adjacent-line prefetch), followed by the data region.</li>
+<li><strong>On-heap:</strong> inheritance padding. A superclass with 16 <code>long</code> fields (128 bytes), a middle class with the hot fields, and a subclass with 16 more <code>long</code> fields. HotSpot lays out superclass fields first, so field reordering cannot move hot fields into the padding.</li>
+<li><strong>No <code>int</code> hot fields.</strong> HotSpot fills the 4-byte gap after the compressed object header with a small field from any class in the hierarchy, which put <code>int claimedLength</code> in front of the padding. The claimed length is read from the frame header instead.</li>
+<li><code>RingBufferLayoutTest</code> asserts with JOL that at least 128 bytes precede and follow the hot fields of both objects.</li>
+</ul>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>+</strong> Producer and consumer state live in separate cache lines regardless of allocation order.</li>
+<li><strong>+</strong> The layout is checked in CI, so a JVM or field change that breaks it fails the build.</li>
+<li><strong>−</strong> About 300 bytes per writer/reader object.</li>
+<li><strong>−</strong> <code>@Contended</code> would be shorter but needs <code>-XX:-RestrictContended</code> for non-JDK code, which a library cannot require.</li>
+</ul>
 
 
 
@@ -1150,10 +797,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "search.suggest"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "search.suggest"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
     
   </body>

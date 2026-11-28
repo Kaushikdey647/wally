@@ -6,33 +6,33 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="High-throughput, zero-allocation off-heap hybrid WAL & event queue for Java">
+        <meta name="description" content="Lock-free, zero-allocation off-heap SPSC ring buffer for Java">
       
       
       
       
-        <link rel="prev" href="../format/">
+        <link rel="prev" href="../0001-ffm-over-unsafe/">
       
       
-        <link rel="next" href="../roadmap/">
+        <link rel="next" href="../0003-claim-commit-acquire-release/">
       
       
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
     
     
       
-        <title>Guarantees - Wally</title>
+        <title>0002 Variable-length frames - Wally</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -51,7 +51,7 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#guarantees" class="md-skip">
+        <a href="#adr-0002-variable-length-frames-addressed-by-virtual-byte-cursors" class="md-skip">
           Skip to content
         </a>
       
@@ -96,7 +96,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="Wally" class="md-header__button md-logo" aria-label="Wally" data-md-component="logo">
+    <a href="../.." title="Wally" class="md-header__button md-logo" aria-label="Wally" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Guarantees
+              0002 Variable-length frames
             
           </span>
         </div>
@@ -234,7 +234,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="Wally" class="md-nav__button md-logo" aria-label="Wally" data-md-component="logo">
+    <a href="../.." title="Wally" class="md-nav__button md-logo" aria-label="Wally" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -264,7 +264,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -290,130 +290,15 @@
   
   
   
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Start here
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Start here
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
     <li class="md-nav__item">
-      <a href="../how-it-works/" class="md-nav__link">
+      <a href="../../quickstart/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    How Wally works
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../glossary/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Glossary
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../concepts/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Concepts
+    Quick start
   
 
     
@@ -433,14 +318,41 @@
   
   
     <li class="md-nav__item">
-      <a href="../record-layout/" class="md-nav__link">
+      <a href="../../implementation/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Record layout
+    Implementation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
   
 
     
@@ -485,7 +397,7 @@
   <span class="md-ellipsis">
     
   
-    Design
+    ADRs
   
 
     
@@ -501,7 +413,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Design
+    ADRs
   
 
           </label>
@@ -514,42 +426,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../design/blueprint/" class="md-nav__link">
+      <a href="../0001-ffm-over-unsafe/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Blueprint
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../format/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    File format
+    0001 FFM over Unsafe
   
 
     
@@ -586,7 +470,7 @@
   <span class="md-ellipsis">
     
   
-    Guarantees
+    0002 Variable-length frames
   
 
     
@@ -604,7 +488,7 @@
   <span class="md-ellipsis">
     
   
-    Guarantees
+    0002 Variable-length frames
   
 
     
@@ -630,10 +514,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#durability-per-flush-policy" class="md-nav__link">
+  <a href="#context" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Durability per flush policy
+        Context
       
     </span>
   </a>
@@ -641,10 +525,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#visibility-and-ordering" class="md-nav__link">
+  <a href="#decision" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Visibility and ordering
+        Decision
       
     </span>
   </a>
@@ -652,10 +536,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#recovery" class="md-nav__link">
+  <a href="#consequences" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Recovery
+        Consequences
       
     </span>
   </a>
@@ -671,119 +555,6 @@
 
               
             
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../roadmap/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Roadmap
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../benchmarks/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Benchmarks
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
-        
-          
-          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    ADRs
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_8">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    ADRs
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
               
                 
   
@@ -791,14 +562,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../adr/0001-ffm-over-unsafe/" class="md-nav__link">
+      <a href="../0003-claim-commit-acquire-release/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    0001 FFM over Unsafe
+    0003 Claim/commit and acquire/release
   
 
     
@@ -819,14 +590,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../adr/0002-position-addressing/" class="md-nav__link">
+      <a href="../0004-wrap-sentinel-ordering/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    0002 Position addressing
+    0004 Wrap sentinel ordering
   
 
     
@@ -847,42 +618,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../adr/0003-claim-commit-protocol/" class="md-nav__link">
+      <a href="../0005-false-sharing-padding/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    0003 Claim/commit protocol
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../adr/0004-fetch-add-tail/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    0004 Fetch-add tail
+    0005 False-sharing padding
   
 
     
@@ -930,10 +673,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#durability-per-flush-policy" class="md-nav__link">
+  <a href="#context" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Durability per flush policy
+        Context
       
     </span>
   </a>
@@ -941,10 +684,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#visibility-and-ordering" class="md-nav__link">
+  <a href="#decision" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Visibility and ordering
+        Decision
       
     </span>
   </a>
@@ -952,10 +695,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#recovery" class="md-nav__link">
+  <a href="#consequences" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Recovery
+        Consequences
       
     </span>
   </a>
@@ -982,54 +725,23 @@
   
 
 
-<h1 id="guarantees">Guarantees<a class="headerlink" href="#guarantees" title="Permanent link">&para;</a></h1>
-<div class="admonition info">
-<p class="admonition-title">Draft</p>
-<p>Finalized and verified in M3.</p>
-</div>
-<h2 id="durability-per-flush-policy">Durability per flush policy<a class="headerlink" href="#durability-per-flush-policy" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Policy</th>
-<th>Survives process crash</th>
-<th>Survives OS crash / power loss</th>
-<th>Cost</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>none()</code></td>
-<td>Yes, once committed (page cache)</td>
-<td>No guarantee</td>
-<td>Lowest latency</td>
-</tr>
-<tr>
-<td><code>periodic(d)</code></td>
-<td>Yes</td>
-<td>Records at or below <code>flushedPosition()</code>; up to <code>d</code> of data may be lost</td>
-<td>Group commit</td>
-</tr>
-<tr>
-<td><code>sync()</code></td>
-<td>Yes</td>
-<td>Yes, once <code>append</code> returns</td>
-<td>One <code>force()</code> per append</td>
-</tr>
-</tbody>
-</table>
-<div class="admonition warning">
-<p class="admonition-title">macOS</p>
-<p><code>msync</code>/<code>fsync</code> on macOS does not guarantee data reaches stable storage. True durability needs <code>F_FULLFSYNC</code>. Treat macOS as a development platform.</p>
-</div>
-<h2 id="visibility-and-ordering">Visibility and ordering<a class="headerlink" href="#visibility-and-ordering" title="Permanent link">&para;</a></h2>
+<h1 id="adr-0002-variable-length-frames-addressed-by-virtual-byte-cursors">ADR 0002: Variable-length frames addressed by virtual byte cursors<a class="headerlink" href="#adr-0002-variable-length-frames-addressed-by-virtual-byte-cursors" title="Permanent link">&para;</a></h1>
+<p><strong>Status:</strong> Accepted · <strong>Date:</strong> 2026-11-28</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>Typical payloads (orders, quotes, market-data ticks) vary in size. Fixed-size slots either waste space or cap the message size, and slot-of-references queues force a heap object per message.</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
 <ul>
-<li>A record is visible to tailers once its <code>length</code> is published with release semantics.</li>
-<li>Tailers see records in position order. They never skip an uncommitted record; they wait at it.</li>
-<li>With multiple producers, position order is claim order, not commit order.</li>
+<li>Messages are stored inline as frames: an 8-byte header (4-byte length + 4 bytes padding) followed by the payload, padded so every frame is a multiple of 8 bytes. Payloads are therefore always 8-byte aligned for <code>ValueLayout</code> access.</li>
+<li><code>head</code> and <code>tail</code> are monotonically increasing 64-bit byte positions ("virtual cursors"). The ring index is <code>cursor &amp; (capacity - 1)</code>, so capacity must be a power of two.</li>
+<li>A length of 0 is reserved as the wrap sentinel (ADR 0004), so zero-length messages are rejected.</li>
 </ul>
-<h2 id="recovery">Recovery<a class="headerlink" href="#recovery" title="Permanent link">&para;</a></h2>
-<p>On open, Wally scans from the last checkpoint and truncates at the first uncommitted or CRC-invalid record. Recovery never surfaces a corrupt record.</p>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>+</strong> No per-message objects; the producer writes straight into the ring (zero copy).</li>
+<li><strong>+</strong> Empty (<code>head == tail</code>) and full (<code>tail - head == capacity</code>) are unambiguous without a spare slot; 64-bit cursors do not overflow in practice.</li>
+<li><strong>−</strong> <code>Reader.sequence()</code> and the handler's <code>sequence</code> argument are byte positions, not message counts, and <code>available()</code> is in bytes.</li>
+<li><strong>−</strong> 8 bytes of header plus up to 7 bytes of padding per message, and a power-of-two capacity.</li>
+</ul>
 
 
 
@@ -1085,10 +797,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "search.suggest"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "search.suggest"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
     
   </body>

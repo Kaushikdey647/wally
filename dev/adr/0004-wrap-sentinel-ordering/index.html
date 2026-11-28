@@ -6,26 +6,26 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="High-throughput, zero-allocation off-heap hybrid WAL & event queue for Java">
+        <meta name="description" content="Lock-free, zero-allocation off-heap SPSC ring buffer for Java">
       
       
       
       
-        <link rel="prev" href="../0002-position-addressing/">
+        <link rel="prev" href="../0003-claim-commit-acquire-release/">
       
       
-        <link rel="next" href="../0004-fetch-add-tail/">
+        <link rel="next" href="../0005-false-sharing-padding/">
       
       
         
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
     
     
       
-        <title>0003 Claim/commit protocol - Wally</title>
+        <title>0004 Wrap sentinel ordering - Wally</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#adr-0003-two-phase-claimcommit-with-length-as-the-commit-marker" class="md-skip">
+        <a href="#adr-0004-write-the-wrap-sentinel-only-after-the-gap-is-proven-free" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              0003 Claim/commit protocol
+              0004 Wrap sentinel ordering
             
           </span>
         </div>
@@ -290,130 +290,15 @@
   
   
   
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Start here
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Start here
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
     <li class="md-nav__item">
-      <a href="../../how-it-works/" class="md-nav__link">
+      <a href="../../quickstart/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    How Wally works
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../glossary/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Glossary
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../concepts/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Concepts
+    Quick start
   
 
     
@@ -433,184 +318,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../record-layout/" class="md-nav__link">
+      <a href="../../implementation/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Record layout
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
-        
-          
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Design
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Design
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../design/blueprint/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Blueprint
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../format/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    File format
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guarantees/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Guarantees
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../roadmap/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Roadmap
+    Implementation
   
 
     
@@ -672,10 +387,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
-          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
             
   
   
@@ -693,8 +408,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_8">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -739,14 +454,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../0002-position-addressing/" class="md-nav__link">
+      <a href="../0002-variable-length-frames/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    0002 Position addressing
+    0002 Variable-length frames
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0003-claim-commit-acquire-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0003 Claim/commit and acquire/release
   
 
     
@@ -783,7 +526,7 @@
   <span class="md-ellipsis">
     
   
-    0003 Claim/commit protocol
+    0004 Wrap sentinel ordering
   
 
     
@@ -801,7 +544,7 @@
   <span class="md-ellipsis">
     
   
-    0003 Claim/commit protocol
+    0004 Wrap sentinel ordering
   
 
     
@@ -875,14 +618,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../0004-fetch-add-tail/" class="md-nav__link">
+      <a href="../0005-false-sharing-padding/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    0004 Fetch-add tail
+    0005 False-sharing padding
   
 
     
@@ -982,24 +725,24 @@
   
 
 
-<h1 id="adr-0003-two-phase-claimcommit-with-length-as-the-commit-marker">ADR 0003: Two-phase claim/commit with length as the commit marker<a class="headerlink" href="#adr-0003-two-phase-claimcommit-with-length-as-the-commit-marker" title="Permanent link">&para;</a></h1>
-<p><strong>Status:</strong> Accepted · <strong>Date:</strong> 2026-11-05</p>
+<h1 id="adr-0004-write-the-wrap-sentinel-only-after-the-gap-is-proven-free">ADR 0004: Write the wrap sentinel only after the gap is proven free<a class="headerlink" href="#adr-0004-write-the-wrap-sentinel-only-after-the-gap-is-proven-free" title="Permanent link">&para;</a></h1>
+<p><strong>Status:</strong> Accepted · <strong>Date:</strong> 2026-11-28</p>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>Producers must write records in place (zero copy) while readers scan concurrently, without locks. Readers must never observe a partially written record.</p>
+<p>Frames never straddle the end of the ring. When a frame does not fit in the remaining bytes of the current lap, the writer marks the rest of the lap as unused with a sentinel (length 0) and places the frame at index 0 of the next lap.</p>
+<p>An earlier implementation wrote the sentinel first and checked free space afterwards. When the ring was full, the sentinel landed on the length header of an unread frame; the reader then took that frame for a wrap and silently skipped the rest of the lap. Uniform message sizes hid the bug because the overwritten header was already a sentinel.</p>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
 <ol>
-<li><strong>Claim:</strong> reserve <code>align8(16 + len)</code> bytes at the tail. The <code>frameLength</code> field is still 0.</li>
-<li><strong>Write:</strong> fill type, flags, CRC and payload with plain stores.</li>
-<li><strong>Commit:</strong> store <code>frameLength</code> (header + payload) with <code>setRelease</code>.</li>
+<li>If the frame does not fit before the end of the lap, compute <code>nextLap = (tail &amp; ~mask) + capacity</code> and check that <code>[tail, nextLap)</code> is free (<code>nextLap - head &lt;= capacity</code>). If not, return <code>false</code> without writing anything.</li>
+<li>Write the sentinel, set <code>tail = nextLap</code>, and publish it with a release store immediately.</li>
+<li>Check space for the frame at index 0. If there is none, return <code>false</code>; the published skip stays valid.</li>
+<li>Write the length header only after the frame's space check succeeds.</li>
 </ol>
-<p>Readers load <code>frameLength</code> with <code>getAcquire</code>. <code>0</code> means "not committed", so stop. A positive value guarantees the rest of the record is visible (release/acquire happens-before).</p>
-<p>Segments are zero-filled on creation, so unwritten space always reads as <code>frameLength == 0</code>. Aborted claims are rewritten as padding frames.</p>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>+</strong> One release store per record; no locks, no CAS on the read path.</li>
-<li><strong>+</strong> Torn writes after a crash show up as <code>frameLength == 0</code> or a CRC mismatch, which makes recovery simple.</li>
-<li><strong>−</strong> A producer that dies between claim and commit leaves a hole that blocks readers. Mitigation (post-MVP): an unblocker that pads over holes after a timeout.</li>
-<li><strong>−</strong> Max payload is bounded by <code>int</code> and by segment size minus headers.</li>
+<li><strong>+</strong> The writer never writes to memory the reader has not consumed.</li>
+<li><strong>+</strong> Publishing the skip separately fixes a liveness bug: a frame larger than both the remaining gap and the current index could otherwise never be placed, because it needed the reader to pass a tail that had not moved.</li>
+<li><strong>−</strong> A wrap costs one extra release store.</li>
+<li>Verified by <code>RingBufferWrapTest</code> (deterministic reproduction that fails on the old ordering, plus 2M random-size messages across two threads) and the jcstress <code>SpscWrapPublishTest</code>.</li>
 </ul>
 
 
@@ -1059,7 +802,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "search.suggest"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
     
   </body>

@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="High-throughput, zero-allocation off-heap hybrid WAL & event queue for Java">
+        <meta name="description" content="Lock-free, zero-allocation off-heap SPSC ring buffer for Java">
       
       
       
@@ -14,14 +14,14 @@
         <link rel="prev" href="../../benchmarks/">
       
       
-        <link rel="next" href="../0002-position-addressing/">
+        <link rel="next" href="../0002-variable-length-frames/">
       
       
         
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
     
     
       
@@ -290,130 +290,15 @@
   
   
   
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Start here
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Start here
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
     <li class="md-nav__item">
-      <a href="../../how-it-works/" class="md-nav__link">
+      <a href="../../quickstart/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    How Wally works
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../glossary/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Glossary
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../concepts/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Concepts
+    Quick start
   
 
     
@@ -433,184 +318,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../record-layout/" class="md-nav__link">
+      <a href="../../implementation/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Record layout
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
-        
-          
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Design
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Design
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../design/blueprint/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Blueprint
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../format/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    File format
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guarantees/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Guarantees
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../roadmap/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Roadmap
+    Implementation
   
 
     
@@ -672,10 +387,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
-          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
             
   
   
@@ -693,8 +408,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_8">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -819,14 +534,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../0002-position-addressing/" class="md-nav__link">
+      <a href="../0002-variable-length-frames/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    0002 Position addressing
+    0002 Variable-length frames
   
 
     
@@ -847,14 +562,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../0003-claim-commit-protocol/" class="md-nav__link">
+      <a href="../0003-claim-commit-acquire-release/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    0003 Claim/commit protocol
+    0003 Claim/commit and acquire/release
   
 
     
@@ -875,14 +590,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../0004-fetch-add-tail/" class="md-nav__link">
+      <a href="../0004-wrap-sentinel-ordering/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    0004 Fetch-add tail
+    0004 Wrap sentinel ordering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0005-false-sharing-padding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0005 False-sharing padding
   
 
     
@@ -983,19 +726,19 @@
 
 
 <h1 id="adr-0001-use-the-ffm-api-instead-of-unsafe">ADR 0001: Use the FFM API instead of Unsafe<a class="headerlink" href="#adr-0001-use-the-ffm-api-instead-of-unsafe" title="Permanent link">&para;</a></h1>
-<p><strong>Status:</strong> Accepted · <strong>Date:</strong> 2026-11-05</p>
+<p><strong>Status:</strong> Accepted · <strong>Date:</strong> 2026-11-28</p>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>Wally needs off-heap memory, memory-mapped files, atomic operations on raw memory, and deterministic unmapping. Historically this meant <code>sun.misc.Unsafe</code> + <code>MappedByteBuffer</code>.</p>
+<p>The ring buffer lives off-heap so messages create no garbage, and its cursors need acquire/release access on raw memory. Historically that meant <code>sun.misc.Unsafe</code> or direct <code>ByteBuffer</code>s.</p>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
-<p>Target JDK 25 LTS and use the final Foreign Function &amp; Memory API: <code>MemorySegment</code>, <code>Arena</code>, <code>ValueLayout.varHandle()</code> for atomics, <code>FileChannel.map(..., arena)</code> for mapping, and <code>Linker</code> for <code>madvise</code>.</p>
+<p>Use the final Foreign Function &amp; Memory API (JEP 454): one <code>MemorySegment</code> per ring allocated from an <code>Arena</code>, <code>ValueLayout.JAVA_LONG.varHandle()</code> for acquire/release cursor access, and plain <code>ValueLayout</code> accessors for frame headers and payloads. Bytecode targets Java 22 (<code>--release 22</code>); the build uses JDK 25.</p>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>+</strong> Supported API: <code>Unsafe</code> memory access warns from JDK 24 and is slated for removal.</li>
-<li><strong>+</strong> <code>arena.close()</code> unmaps deterministically. No more relying on GC to unmap.</li>
-<li><strong>+</strong> Bounds and liveness checks, which the JIT removes on hot paths.</li>
-<li><strong>−</strong> Requires JDK 22+ (we pick 25 LTS). Excludes users stuck on 17/21.</li>
-<li><strong>−</strong> <code>asSlice()</code> allocates, so the API exposes <code>(segment, offset, length)</code> triples.</li>
-<li><strong>−</strong> Closing a shared arena while another thread is using it throws, so segment lifetime needs refcounting.</li>
+<li><strong>+</strong> Bounds and liveness checks that the JIT removes on hot paths.</li>
+<li><strong>+</strong> Lifetime is explicit: the default <code>Arena.ofAuto()</code> frees the ring when unreachable, <code>Arena.ofShared()</code> frees it on <code>close()</code>.</li>
+<li><strong>−</strong> Producer and consumer are different threads, so <code>Arena.ofConfined()</code> cannot be used: its segments throw <code>WrongThreadException</code> off the owner thread.</li>
+<li><strong>−</strong> Requires Java 22+. Excludes users on 17/21.</li>
+<li><strong>−</strong> <code>asSlice()</code> allocates, so slicing happens once at construction and the hot-path API passes <code>(segment, offset, length)</code> instead of per-message slices.</li>
 </ul>
 
 
@@ -1055,7 +798,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "search.suggest"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
     
   </body>

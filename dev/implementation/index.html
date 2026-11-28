@@ -1,0 +1,2163 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Lock-free, zero-allocation off-heap SPSC ring buffer for Java">
+      
+      
+      
+      
+        <link rel="prev" href="../quickstart/">
+      
+      
+        <link rel="next" href="../benchmarks/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
+    
+    
+      
+        <title>Implementation - Wally</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#implementation-details" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Wally" class="md-header__button md-logo" aria-label="Wally" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Wally
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Implementation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/kaushikdey647/wally" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Wally" class="md-nav__button md-logo" aria-label="Wally" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Wally
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/kaushikdey647/wally" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Implementation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Implementation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#memory-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory Layout
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Memory Layout">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overall-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overall Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cursor-metadata-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cursor Metadata Layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ring-buffer-data-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ring Buffer Data Layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#index-calculation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Index Calculation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#write-algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Write Algorithm
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Write Algorithm">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-claim-space" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Claim Space
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-write-payload" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Write Payload
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-commit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Commit
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#read-algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read Algorithm
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#synchronization-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Synchronization Protocol
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Synchronization Protocol">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#happens-before-relationships" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Happens-Before Relationships
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation-via-varhandle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation via VarHandle
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#space-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Space Management
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Space Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#available-space-calculation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Space Calculation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#full-vs-empty" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full vs Empty
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wrapping-mechanics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wrapping Mechanics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Wrapping Mechanics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sentinel-placement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sentinel Placement
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reader-handling-of-sentinel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reader Handling of Sentinel
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alignment
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Alignment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-8-byte-alignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why 8-Byte Alignment?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#alignment-enforcement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alignment Enforcement
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cache-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cache Considerations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cache Considerations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#false-sharing-prevention" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        False Sharing Prevention
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#on-heap-writerreader-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        On-Heap Writer/Reader State
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spatial-locality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spatial Locality
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#edge-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edge Cases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Edge Cases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#minimum-capacity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimum Capacity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#maximum-message-size" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Maximum Message Size
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sentinel-at-index-0" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sentinel at Index 0
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#full-ring-with-sentinel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Ring with Sentinel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#overflow-protection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overflow Protection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-trade-offs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Trade-offs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implementation Trade-offs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#power-of-two-capacity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Power-of-Two Capacity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-byte-header" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8-Byte Header
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#virtual-cursors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Virtual Cursors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cached-head-in-writer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cached Head in Writer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#correctness-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Correctness Properties
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Correctness Properties">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#safety-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Safety Properties
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#liveness-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Liveness Properties
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADRs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ADRs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0001-ffm-over-unsafe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0001 FFM over Unsafe
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0002-variable-length-frames/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0002 Variable-length frames
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0003-claim-commit-acquire-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0003 Claim/commit and acquire/release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0004-wrap-sentinel-ordering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0004 Wrap sentinel ordering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0005-false-sharing-padding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0005 False-sharing padding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#memory-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory Layout
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Memory Layout">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overall-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overall Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cursor-metadata-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cursor Metadata Layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ring-buffer-data-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ring Buffer Data Layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#index-calculation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Index Calculation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#write-algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Write Algorithm
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Write Algorithm">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-claim-space" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Claim Space
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-write-payload" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Write Payload
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-commit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Commit
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#read-algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read Algorithm
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#synchronization-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Synchronization Protocol
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Synchronization Protocol">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#happens-before-relationships" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Happens-Before Relationships
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation-via-varhandle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation via VarHandle
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#space-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Space Management
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Space Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#available-space-calculation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Space Calculation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#full-vs-empty" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full vs Empty
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wrapping-mechanics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wrapping Mechanics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Wrapping Mechanics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sentinel-placement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sentinel Placement
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reader-handling-of-sentinel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reader Handling of Sentinel
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alignment
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Alignment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-8-byte-alignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why 8-Byte Alignment?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#alignment-enforcement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alignment Enforcement
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cache-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cache Considerations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cache Considerations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#false-sharing-prevention" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        False Sharing Prevention
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#on-heap-writerreader-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        On-Heap Writer/Reader State
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spatial-locality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spatial Locality
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#edge-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edge Cases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Edge Cases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#minimum-capacity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimum Capacity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#maximum-message-size" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Maximum Message Size
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sentinel-at-index-0" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sentinel at Index 0
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#full-ring-with-sentinel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Ring with Sentinel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#overflow-protection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overflow Protection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-trade-offs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Trade-offs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implementation Trade-offs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#power-of-two-capacity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Power-of-Two Capacity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-byte-header" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8-Byte Header
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#virtual-cursors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Virtual Cursors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cached-head-in-writer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cached Head in Writer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#correctness-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Correctness Properties
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Correctness Properties">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#safety-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Safety Properties
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#liveness-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Liveness Properties
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="implementation-details">Implementation Details<a class="headerlink" href="#implementation-details" title="Permanent link">&para;</a></h1>
+<p>This document explains the internal implementation of Wally's SPSC ring buffer, covering memory layout, algorithms, and design decisions. The reasoning behind each decision is recorded in the <a href="../adr/0001-ffm-over-unsafe/">ADRs</a>.</p>
+<h2 id="memory-layout">Memory Layout<a class="headerlink" href="#memory-layout" title="Permanent link">&para;</a></h2>
+<h3 id="overall-structure">Overall Structure<a class="headerlink" href="#overall-structure" title="Permanent link">&para;</a></h3>
+<p>The ring buffer consists of two regions allocated in a single contiguous block:</p>
+<div class="highlight"><pre><span></span><code>Offset    Size      Description
+─────────────────────────────────────────────────────
+0         256B      Cursor metadata (head + tail with padding)
+256       N bytes   Ring buffer data (capacity)
+</code></pre></div>
+<p>Total allocation: <code>256 + capacity</code> bytes, aligned to 64-byte boundary.</p>
+<h3 id="cursor-metadata-layout">Cursor Metadata Layout<a class="headerlink" href="#cursor-metadata-layout" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Byte      Content                              Purpose
+───────────────────────────────────────────────────────────────
+0-55      Padding (unused)                     Cache line padding
+56-63     Head cursor (long)                   Consumer's read position
+64-183    Padding (unused)                     Prevent false sharing
+184-191   Tail cursor (long)                   Producer's write position
+192-255   Padding (unused)                     Cache line padding
+</code></pre></div>
+<p><strong>Rationale</strong>: 128-byte separation prevents false sharing even with Adjacent Cache Line Prefetch (Intel) which speculatively loads adjacent cache lines.</p>
+<p><strong>Virtual cursors</strong>: Both head and tail are monotonically increasing 64-bit integers representing byte offsets in a virtual infinite buffer. The actual ring index is computed via masking.</p>
+<h3 id="ring-buffer-data-layout">Ring Buffer Data Layout<a class="headerlink" href="#ring-buffer-data-layout" title="Permanent link">&para;</a></h3>
+<p>Frames are stored contiguously with wrapping at capacity boundary:</p>
+<div class="highlight"><pre><span></span><code>Frame structure:
+┌──────────┬──────────┬────────────────────────────┐
+│ Length   │ Padding  │ Payload (8-byte aligned)   │
+│ 4 bytes  │ 4 bytes  │ length bytes, padded to 8  │
+└──────────┴──────────┴────────────────────────────┘
+◄────── 8 bytes ─────►◄──────── aligned ──────────►
+</code></pre></div>
+<p><strong>Length field</strong>: Contains actual payload size (not padded size). Allows reader to deliver exact message length to handler.</p>
+<p><strong>Padding</strong>: 4 bytes after length ensures payload starts at 8-byte aligned offset. Required for <code>ValueLayout</code> operations.</p>
+<p><strong>Payload padding</strong>: Payload is padded to 8-byte boundary so next frame starts aligned.</p>
+<h2 id="index-calculation">Index Calculation<a class="headerlink" href="#index-calculation" title="Permanent link">&para;</a></h2>
+<p>Ring indices are computed from virtual cursors via masking:</p>
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">index</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="n">cursor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">mask</span><span class="p">);</span>
+</code></pre></div>
+<p>Where <code>mask = capacity - 1</code> (capacity must be power of 2).</p>
+<p><strong>Example</strong> (capacity = 256, mask = 0xFF):
+<div class="highlight"><pre><span></span><code>cursor = 0     → index = 0
+cursor = 100   → index = 100
+cursor = 256   → index = 0    (wrap)
+cursor = 300   → index = 44
+</code></pre></div></p>
+<p><strong>Benefits</strong>:
+- Fast modulo via single AND operation
+- No branch mispredictions
+- Natural sequence numbers from cursor values
+- Avoids wrapping arithmetic complexity</p>
+<h2 id="write-algorithm">Write Algorithm<a class="headerlink" href="#write-algorithm" title="Permanent link">&para;</a></h2>
+<h3 id="phase-1-claim-space">Phase 1: Claim Space<a class="headerlink" href="#phase-1-claim-space" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kt">boolean</span><span class="w"> </span><span class="nf">tryClaim</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">length</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">frameSize</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">HEADER_SIZE</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">align</span><span class="p">(</span><span class="n">length</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">);</span>
+
+<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="n">tail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="na">tail</span><span class="p">;</span><span class="w">                 </span><span class="c1">// writer owns tail: plain field, no atomic load</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">tailIndex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="n">tail</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">mask</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">tailIndex</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">frameSize</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">capacity</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// The gap [tail, nextLap) must be free before the sentinel is written,</span>
+<span class="w">        </span><span class="c1">// otherwise the sentinel could overwrite an unread frame's length.</span>
+<span class="w">        </span><span class="kt">long</span><span class="w"> </span><span class="n">nextLap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">tail</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="o">~</span><span class="n">mask</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">capacity</span><span class="p">;</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">hasSpace</span><span class="p">(</span><span class="n">nextLap</span><span class="p">))</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span><span class="w">          </span><span class="c1">// nothing written</span>
+<span class="w">        </span><span class="n">data</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">JAVA_INT</span><span class="p">,</span><span class="w"> </span><span class="n">tailIndex</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w">              </span><span class="c1">// sentinel</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">tail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">nextLap</span><span class="p">;</span>
+<span class="w">        </span><span class="n">tailIndex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">        </span><span class="n">setLongRelease</span><span class="p">(</span><span class="n">memory</span><span class="p">,</span><span class="w"> </span><span class="n">tailOffset</span><span class="p">,</span><span class="w"> </span><span class="n">tail</span><span class="p">);</span><span class="w">      </span><span class="c1">// publish the skip on its own</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="n">newTail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tail</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">frameSize</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">hasSpace</span><span class="p">(</span><span class="n">newTail</span><span class="p">))</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span><span class="w">              </span><span class="c1">// nothing written</span>
+<span class="w">    </span><span class="n">data</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">JAVA_INT</span><span class="p">,</span><span class="w"> </span><span class="n">tailIndex</span><span class="p">,</span><span class="w"> </span><span class="n">length</span><span class="p">);</span><span class="w">             </span><span class="c1">// invisible until commit</span>
+<span class="w">    </span><span class="n">claimedTail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tail</span><span class="p">;</span>
+<span class="w">    </span><span class="n">claimedNextTail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">newTail</span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">true</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">boolean</span><span class="w"> </span><span class="nf">hasSpace</span><span class="p">(</span><span class="kt">long</span><span class="w"> </span><span class="n">newTail</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">newTail</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">cachedHead</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">capacity</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="kc">true</span><span class="p">;</span>
+<span class="w">    </span><span class="n">cachedHead</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">getLongAcquire</span><span class="p">(</span><span class="n">memory</span><span class="p">,</span><span class="w"> </span><span class="n">headOffset</span><span class="p">);</span><span class="w">   </span><span class="c1">// refresh only when the cached value says full</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">newTail</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">cachedHead</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">capacity</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Key points</strong>:
+- <strong>Space check before any write</strong>: The writer never writes to ring memory it has not proven free. An earlier version wrote the sentinel first; with mixed frame sizes and a full ring that zeroed the header of an unread frame, and the reader silently skipped the rest of the lap. <code>RingBufferWrapTest</code> reproduces that case.
+- <strong>Skip published separately</strong>: A frame that must wrap needs the reader to have consumed the gap at the end of the lap. Publishing the sentinel as its own tail update lets the reader move past it, so a frame larger than both the gap and <code>tailIndex</code> still gets placed once the reader catches up.
+- <strong>Cached head</strong>: The writer only performs an acquire load of <code>head</code> when the cached value says the ring is full.
+- <strong>Uncommitted state</strong>: The length is written but the tail is not advanced, so the reader cannot see the frame.</p>
+<h3 id="phase-2-write-payload">Phase 2: Write Payload<a class="headerlink" href="#phase-2-write-payload" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kt">long</span><span class="w"> </span><span class="n">payloadOffset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">writer</span><span class="p">.</span><span class="na">offset</span><span class="p">();</span><span class="w">  </span><span class="c1">// index + HEADER_SIZE, relative to writer.buffer()</span>
+<span class="n">writer</span><span class="p">.</span><span class="na">buffer</span><span class="p">().</span><span class="na">set</span><span class="p">(</span><span class="n">ValueLayout</span><span class="p">.</span><span class="na">JAVA_LONG</span><span class="p">,</span><span class="w"> </span><span class="n">payloadOffset</span><span class="p">,</span><span class="w"> </span><span class="n">value</span><span class="p">);</span>
+</code></pre></div>
+<p><strong>Zero-copy</strong>: <code>buffer()</code> is a slice of the data region (it excludes the cursors), created once at construction.</p>
+<h3 id="phase-3-commit">Phase 3: Commit<a class="headerlink" href="#phase-3-commit" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="nf">commit</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">tail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">claimedNextTail</span><span class="p">;</span>
+<span class="w">    </span><span class="n">setLongRelease</span><span class="p">(</span><span class="n">memory</span><span class="p">,</span><span class="w"> </span><span class="n">tailOffset</span><span class="p">,</span><span class="w"> </span><span class="n">tail</span><span class="p">);</span><span class="w">  </span><span class="c1">// publish</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Memory ordering</strong>: <code>setLongRelease</code> ensures all prior writes (length field, payload) are visible before the new tail value. This is the synchronization point.</p>
+<h2 id="read-algorithm">Read Algorithm<a class="headerlink" href="#read-algorithm" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="nf">read</span><span class="p">(</span><span class="n">MessageHandler</span><span class="w"> </span><span class="n">handler</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">limit</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="n">currentHead</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">head</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="n">tail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cachedTail</span><span class="p">;</span>
+<span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">count</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">limit</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">currentHead</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">tail</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">tail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">getLongAcquire</span><span class="p">(</span><span class="n">memory</span><span class="p">,</span><span class="w"> </span><span class="n">tailOffset</span><span class="p">);</span><span class="w">  </span><span class="c1">// refresh only when the cached tail is exhausted</span>
+<span class="w">                </span><span class="n">cachedTail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tail</span><span class="p">;</span>
+<span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">currentHead</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">tail</span><span class="p">)</span><span class="w"> </span><span class="k">break</span><span class="p">;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">headIndex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="n">currentHead</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">mask</span><span class="p">);</span>
+<span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">JAVA_INT</span><span class="p">,</span><span class="w"> </span><span class="n">headIndex</span><span class="p">);</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">length</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">                                </span><span class="c1">// sentinel</span>
+<span class="w">                </span><span class="n">currentHead</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">currentHead</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="o">~</span><span class="n">mask</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">capacity</span><span class="p">;</span>
+<span class="w">                </span><span class="k">continue</span><span class="p">;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">            </span><span class="kt">long</span><span class="w"> </span><span class="n">position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">currentHead</span><span class="p">;</span>
+<span class="w">            </span><span class="n">currentHead</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">HEADER_SIZE</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">align</span><span class="p">(</span><span class="n">length</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">);</span><span class="w">   </span><span class="c1">// advance before the callback</span>
+<span class="w">            </span><span class="n">handler</span><span class="p">.</span><span class="na">onMessage</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">headIndex</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">HEADER_SIZE</span><span class="p">,</span><span class="w"> </span><span class="n">length</span><span class="p">,</span><span class="w"> </span><span class="n">position</span><span class="p">);</span>
+<span class="w">            </span><span class="n">count</span><span class="o">++</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">finally</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">head</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">currentHead</span><span class="p">;</span>
+<span class="w">        </span><span class="n">setLongRelease</span><span class="p">(</span><span class="n">memory</span><span class="p">,</span><span class="w"> </span><span class="n">headOffset</span><span class="p">,</span><span class="w"> </span><span class="n">currentHead</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">count</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Key points</strong>:
+- <strong>Acquire read of tail</strong>: Synchronizes with the writer's release write, so every frame below the observed tail is fully visible. A batch reuses the observed tail and only reloads it once exhausted.
+- <strong>Local head</strong>: Read position kept in a local until the batch completes, then published once.
+- <strong>Exception safety</strong>: The <code>finally</code> block publishes the head even if a handler throws; the frame whose handler threw counts as consumed.</p>
+<h2 id="synchronization-protocol">Synchronization Protocol<a class="headerlink" href="#synchronization-protocol" title="Permanent link">&para;</a></h2>
+<p>The correctness of SPSC communication relies on acquire/release ordering:</p>
+<h3 id="happens-before-relationships">Happens-Before Relationships<a class="headerlink" href="#happens-before-relationships" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Producer Thread                 Consumer Thread
+─────────────────────────────────────────────────────
+1. Write length field
+2. Write payload data
+3. setLongRelease(tail) ────┐
+                            │  happens-before
+                            └──&gt; 4. getLongAcquire(tail)
+                                 5. Read length field
+                                 6. Read payload data
+                                 7. setLongRelease(head)
+                            ┌──&gt; 8. getLongAcquire(head)
+                            │  happens-before
+                            └────
+</code></pre></div>
+<p><strong>Guarantees</strong>:
+- Operations 1-2 are visible after operation 4 (acquire loads preceding release store)
+- Consumer never sees partial writes
+- Consumer never reads uncommitted frames (tail not advanced)</p>
+<h3 id="implementation-via-varhandle">Implementation via VarHandle<a class="headerlink" href="#implementation-via-varhandle" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">VarHandle</span><span class="w"> </span><span class="n">LONG</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ValueLayout</span><span class="p">.</span><span class="na">JAVA_LONG</span><span class="p">.</span><span class="na">varHandle</span><span class="p">();</span>
+
+<span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="nf">getLongAcquire</span><span class="p">(</span><span class="n">MemorySegment</span><span class="w"> </span><span class="n">seg</span><span class="p">,</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">offset</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="p">(</span><span class="kt">long</span><span class="p">)</span><span class="w"> </span><span class="n">LONG</span><span class="p">.</span><span class="na">getAcquire</span><span class="p">(</span><span class="n">seg</span><span class="p">,</span><span class="w"> </span><span class="n">offset</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">setLongRelease</span><span class="p">(</span><span class="n">MemorySegment</span><span class="w"> </span><span class="n">seg</span><span class="p">,</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">offset</span><span class="p">,</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">value</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">LONG</span><span class="p">.</span><span class="na">setRelease</span><span class="p">(</span><span class="n">seg</span><span class="p">,</span><span class="w"> </span><span class="n">offset</span><span class="p">,</span><span class="w"> </span><span class="n">value</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>JMM Semantics</strong> (JLS §17.4):
+- <strong>Release write</strong>: Prevents reordering of prior writes past the release
+- <strong>Acquire read</strong>: Prevents reordering of subsequent reads before the acquire
+- Together: Establishes synchronization between threads</p>
+<p><strong>Hardware</strong>: On x86-64, acquire loads and release stores compile to plain MOVs (TSO already provides the ordering). On AArch64, HotSpot emits LDAR/STLR.</p>
+<h2 id="space-management">Space Management<a class="headerlink" href="#space-management" title="Permanent link">&para;</a></h2>
+<h3 id="available-space-calculation">Available Space Calculation<a class="headerlink" href="#available-space-calculation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kt">long</span><span class="w"> </span><span class="n">availableSpace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">capacity</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="p">(</span><span class="n">tail</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">head</span><span class="p">);</span>
+</code></pre></div>
+<p><strong>Invariant</strong>: <code>tail - head ≤ capacity</code> always holds.</p>
+<p><strong>Proof</strong>:
+- Initially: <code>head = tail = 0</code>, difference is 0
+- Writer advances tail only if <code>tail + frameSize - head ≤ capacity</code>
+- Reader advances head, reducing the difference
+- Thus: <code>tail - head ≤ capacity</code> maintained</p>
+<h3 id="full-vs-empty">Full vs Empty<a class="headerlink" href="#full-vs-empty" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// Empty</span>
+<span class="n">head</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">tail</span>
+
+<span class="c1">// Full</span>
+<span class="n">tail</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">head</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">capacity</span>
+
+<span class="c1">// Partially filled</span>
+<span class="mi">0</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">tail</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">head</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">capacity</span>
+</code></pre></div>
+<p>No ambiguity between empty and full (unlike some ring buffer designs that need an extra slot or flag).</p>
+<h2 id="wrapping-mechanics">Wrapping Mechanics<a class="headerlink" href="#wrapping-mechanics" title="Permanent link">&para;</a></h2>
+<h3 id="sentinel-placement">Sentinel Placement<a class="headerlink" href="#sentinel-placement" title="Permanent link">&para;</a></h3>
+<p>When a frame doesn't fit at the end:</p>
+<div class="highlight"><pre><span></span><code>Before wrap (tail = 232, capacity = 256):
+┌────────────────────────────────────────────────┐
+│ ... existing data ... │ 24 bytes free          │
+└────────────────────────────────────────────────┘
+                        ↑ tailIndex = 232
+
+Need 40-byte frame → doesn't fit
+</code></pre></div>
+<p>The sentinel is only written once the writer has confirmed the reader already consumed <code>[232, 256)</code>; the new tail (256) is published immediately.</p>
+<div class="highlight"><pre><span></span><code>After sentinel write:
+┌────────────────────────────────────────────────┐
+│ ... existing data ... │ [0]│ 20 bytes unused   │
+└────────────────────────────────────────────────┘
+                        ↑ sentinel
+
+Virtual cursor advanced: tail = (232 &amp; ~255) + 256 = 256
+Physical index: tailIndex = 256 &amp; 255 = 0
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>Frame written at index 0:
+┌────────────────────────────────────────────────┐
+│ [len=32][payload...]   │ ... (old data)        │
+└────────────────────────────────────────────────┘
+  ↑ tailIndex = 0
+
+Virtual cursor now: tail = 256 + 40 = 296
+</code></pre></div>
+<p><strong>Virtual cursor arithmetic</strong>: <code>(cursor &amp; ~mask) + capacity</code> advances to next lap without changing physical index to 0 yet. Next modulo operation yields index 0.</p>
+<h3 id="reader-handling-of-sentinel">Reader Handling of Sentinel<a class="headerlink" href="#reader-handling-of-sentinel" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">memory</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">JAVA_INT</span><span class="p">,</span><span class="w"> </span><span class="n">framePos</span><span class="p">);</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">length</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Sentinel: advance to next lap</span>
+<span class="w">    </span><span class="n">currentHead</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">currentHead</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="o">~</span><span class="n">mask</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">capacity</span><span class="p">;</span>
+<span class="w">    </span><span class="k">continue</span><span class="p">;</span><span class="w">  </span><span class="c1">// Skip to next iteration</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Reader skips sentinel without calling handler. Next frame is at physical index 0.</p>
+<h2 id="alignment">Alignment<a class="headerlink" href="#alignment" title="Permanent link">&para;</a></h2>
+<h3 id="why-8-byte-alignment">Why 8-Byte Alignment?<a class="headerlink" href="#why-8-byte-alignment" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>ValueLayout requirement</strong>: <code>JAVA_LONG</code>, <code>JAVA_DOUBLE</code> require 8-byte aligned offsets</li>
+<li><strong>Performance</strong>: Aligned access avoids crossing cache line boundaries</li>
+<li><strong>Atomicity</strong>: Many platforms guarantee atomic access only for aligned words</li>
+<li><strong>Simplicity</strong>: Single alignment value for all operations</li>
+</ol>
+<h3 id="alignment-enforcement">Alignment Enforcement<a class="headerlink" href="#alignment-enforcement" title="Permanent link">&para;</a></h3>
+<p><strong>Frame alignment</strong>:
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">frameSize</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">HEADER_SIZE</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">align</span><span class="p">(</span><span class="n">payloadLength</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">);</span>
+</code></pre></div></p>
+<p>Where <code>align(x, 8) = (x + 7) &amp; ~7</code>.</p>
+<p><strong>Cursor start</strong>: <code>dataOffset()</code> returns 256, which is 8-byte aligned (256 % 8 = 0).</p>
+<p><strong>Virtual cursor arithmetic</strong>: Adding multiples of 8 preserves alignment.</p>
+<p><strong>Result</strong>: Every payload offset is 8-byte aligned:
+<div class="highlight"><pre><span></span><code>payloadOffset = dataOffset (256, aligned)
+                + tailIndex (sum of aligned frame sizes, aligned)
+                + HEADER_SIZE (8, aligned)
+              = aligned
+</code></pre></div></p>
+<h2 id="cache-considerations">Cache Considerations<a class="headerlink" href="#cache-considerations" title="Permanent link">&para;</a></h2>
+<h3 id="false-sharing-prevention">False Sharing Prevention<a class="headerlink" href="#false-sharing-prevention" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Core 0 (Producer)                 Core 1 (Consumer)
+┌─────────────────┐               ┌─────────────────┐
+│   L1 Cache      │               │   L1 Cache      │
+│  ┌────────┐     │               │  ┌────────┐     │
+│  │  Tail  │     │               │  │  Head  │     │
+│  └────────┘     │               │  └────────┘     │
+└─────────────────┘               └─────────────────┘
+        │                                 │
+        └────────── L3 (Shared) ──────────┘
+                 ┌──────────────────┐
+                 │ Cache line 0:    │
+                 │   Head + padding │
+                 ├──────────────────┤
+                 │ Cache line 2+:   │  (128B gap)
+                 │   Tail + padding │
+                 └──────────────────┘
+</code></pre></div>
+<p><strong>Without padding</strong>: Producer writes to tail → cache line invalidation → consumer's cache line evicted → false sharing → performance degradation.</p>
+<p><strong>With 128B padding</strong>: Head and tail in separate cache lines (even with 128B prefetching). Cores can operate without invalidating each other's caches.</p>
+<h3 id="on-heap-writerreader-state">On-Heap Writer/Reader State<a class="headerlink" href="#on-heap-writerreader-state" title="Permanent link">&para;</a></h3>
+<p>The writer's private fields (<code>tail</code>, <code>claimedTail</code>, <code>claimedNextTail</code>, <code>cachedHead</code>) and the reader's (<code>head</code>, <code>cachedTail</code>) are written on every operation by different threads. The two objects are allocated back to back, so without padding they share a cache line (JOL: 40 + 32 bytes) and undo the off-heap cursor padding. Both classes use inheritance padding: 128 bytes of <code>long</code> fields in a superclass, the hot fields in a middle class, and 128 bytes in the subclass, because HotSpot lays out superclass fields first. <code>RingBufferLayoutTest</code> asserts the result with JOL; it already caught HotSpot packing an <code>int</code> field into the 4-byte gap after the object header, ahead of the padding.</p>
+<h3 id="spatial-locality">Spatial Locality<a class="headerlink" href="#spatial-locality" title="Permanent link">&para;</a></h3>
+<p>Ring buffer data is contiguous. Sequential reads/writes benefit from:
+- Hardware prefetching
+- Cache line fills (64 bytes loaded at once)
+- TLB efficiency (fewer page table entries)</p>
+<p><strong>Optimization</strong>: Size frames to fit cache lines. Example: 56-byte payload + 8-byte header = 64 bytes = 1 cache line.</p>
+<h2 id="edge-cases">Edge Cases<a class="headerlink" href="#edge-cases" title="Permanent link">&para;</a></h2>
+<h3 id="minimum-capacity">Minimum Capacity<a class="headerlink" href="#minimum-capacity" title="Permanent link">&para;</a></h3>
+<p><strong>Constraint</strong>: Capacity must hold at least one maximum-size frame.</p>
+<div class="highlight"><pre><span></span><code><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">frameSize</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">capacity</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">MessageTooLargeException</span><span class="p">(</span><span class="n">length</span><span class="p">,</span><span class="w"> </span><span class="n">capacity</span><span class="p">,</span><span class="w"> </span><span class="s">"..."</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Minimum sensible capacity: <code>64</code> (one cache line).</p>
+<h3 id="maximum-message-size">Maximum Message Size<a class="headerlink" href="#maximum-message-size" title="Permanent link">&para;</a></h3>
+<p>Limited by frame size fitting in ring:</p>
+<div class="highlight"><pre><span></span><code><span class="n">maxMessageSize</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">capacity</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">HEADER_SIZE</span><span class="p">;</span>
+</code></pre></div>
+<p>A frame of exactly <code>capacity</code> bytes can only be placed at index 0 with an empty ring, so the writer waits for the reader to drain fully first.</p>
+<h3 id="sentinel-at-index-0">Sentinel at Index 0<a class="headerlink" href="#sentinel-at-index-0" title="Permanent link">&para;</a></h3>
+<p>If a message ends exactly at capacity boundary, next message naturally starts at index 0. No sentinel needed.</p>
+<div class="highlight"><pre><span></span><code><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">tailIndex</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">frameSize</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">capacity</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">  </span><span class="c1">// Strictly greater</span>
+<span class="w">    </span><span class="c1">// Write sentinel</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Equal case (<code>==</code>) does not write sentinel.</p>
+<h3 id="full-ring-with-sentinel">Full Ring with Sentinel<a class="headerlink" href="#full-ring-with-sentinel" title="Permanent link">&para;</a></h3>
+<p>The gap between the sentinel and the end of the lap counts as used space: the tail jumps to the next lap, so <code>tail - head</code> includes it until the reader skips past. No separate adjustment is needed.</p>
+<h3 id="overflow-protection">Overflow Protection<a class="headerlink" href="#overflow-protection" title="Permanent link">&para;</a></h3>
+<p><strong>64-bit cursors</strong>: At 10B messages/sec, would take 58 years to overflow. No special handling needed in practice.</p>
+<p>If overflow concerns exist:
+<div class="highlight"><pre><span></span><code><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">tail</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">Long</span><span class="p">.</span><span class="na">MAX_VALUE</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">frameSize</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Wrap cursors back to 0 (requires coordination)</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<p>Wally does not implement this (not needed for realistic workloads).</p>
+<h2 id="performance">Performance<a class="headerlink" href="#performance" title="Permanent link">&para;</a></h2>
+<p>Measured numbers and methodology are in <a href="../benchmarks/">Benchmarks</a>.</p>
+<h2 id="implementation-trade-offs">Implementation Trade-offs<a class="headerlink" href="#implementation-trade-offs" title="Permanent link">&para;</a></h2>
+<h3 id="power-of-two-capacity">Power-of-Two Capacity<a class="headerlink" href="#power-of-two-capacity" title="Permanent link">&para;</a></h3>
+<p><strong>Pros</strong>:
+- Fast modulo via AND
+- No division instructions
+- Compiler optimizes mask constant</p>
+<p><strong>Cons</strong>:
+- Wastes capacity if natural size isn't power of 2
+- Example: Need 1500 KB → must allocate 2048 KB</p>
+<p><strong>Decision</strong>: Performance benefit outweighs waste.</p>
+<h3 id="8-byte-header">8-Byte Header<a class="headerlink" href="#8-byte-header" title="Permanent link">&para;</a></h3>
+<p>Alternative: 4-byte header (length only, no padding).</p>
+<p><strong>Pros of 8-byte</strong>:
+- Payload always aligned
+- No conditional alignment logic
+- Simpler arithmetic</p>
+<p><strong>Cons of 8-byte</strong>:
+- 4 bytes overhead per message
+- Example: 1M × 32-byte messages → 4 MB wasted</p>
+<p><strong>Decision</strong>: Simplicity and alignment guarantees worth the overhead.</p>
+<h3 id="virtual-cursors">Virtual Cursors<a class="headerlink" href="#virtual-cursors" title="Permanent link">&para;</a></h3>
+<p>Alternative: Wrap cursors at capacity.</p>
+<p><strong>Pros of virtual cursors</strong>:
+- Natural sequence numbers
+- No wrap-around arithmetic
+- Simpler space calculation
+- Easier to reason about</p>
+<p><strong>Cons</strong>:
+- 64-bit arithmetic (negligible on 64-bit CPUs)</p>
+<p><strong>Decision</strong>: Virtual cursors preferred for simplicity.</p>
+<h3 id="cached-head-in-writer">Cached Head in Writer<a class="headerlink" href="#cached-head-in-writer" title="Permanent link">&para;</a></h3>
+<p><strong>Benefit</strong>: Reduces contention on head cursor. Writer only reads when space check fails.</p>
+<p><strong>Cost</strong>: May claim space that was recently freed (brief full condition).</p>
+<h2 id="correctness-properties">Correctness Properties<a class="headerlink" href="#correctness-properties" title="Permanent link">&para;</a></h2>
+<h3 id="safety-properties">Safety Properties<a class="headerlink" href="#safety-properties" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>No data races</strong>: All shared memory accessed with acquire/release</li>
+<li><strong>No lost messages</strong>: Every committed message eventually read (if capacity sufficient)</li>
+<li><strong>FIFO order</strong>: Messages read in write order</li>
+<li><strong>Exactly-once delivery</strong>: Each message read once (reader advances atomically)</li>
+<li><strong>No partial reads</strong>: Consumer sees complete message (synchronization protocol)</li>
+</ol>
+<h3 id="liveness-properties">Liveness Properties<a class="headerlink" href="#liveness-properties" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Bounded steps</strong>: <code>tryClaim</code>, <code>commit</code> and <code>read</code> never block or retry internally; a full or empty ring returns immediately.</li>
+<li><strong>Writer progress</strong>: Any frame up to <code>capacity</code> bytes is eventually placed once the reader drains enough space.</li>
+</ol>
+<h3 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong><code>RingBufferWrapTest</code></strong>: deterministic reproduction of the sentinel-overwrite case, plus 2M random-size messages across two threads with per-byte payload checks</li>
+<li><strong><code>RingBufferTest</code> / <code>EdgeCaseTest</code></strong>: protocol, wrapping, backpressure and argument validation</li>
+<li><strong><code>RingBufferLayoutTest</code></strong> (JOL): at least 128 bytes of padding around the writer and reader hot fields</li>
+<li><strong><code>ZeroAllocationTest</code></strong> (Epsilon GC, 128 MB heap): 50M write/read cycles without allocation</li>
+<li><strong>jcstress</strong> (<code>wally-stress</code>): a reader that sees a non-zero length sees the full payload, with and without a wrap</li>
+</ul>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="http://gee.cs.oswego.edu/dl/jmm/cookbook.html">The JSR-133 Cookbook</a></li>
+<li><a href="https://docs.oracle.com/en/java/javase/22/docs/api/java.base/java/lang/invoke/VarHandle.html">VarHandle Javadoc</a></li>
+<li><a href="https://mechanical-sympathy.blogspot.com/">Martin Thompson: Lock-Free Algorithms</a></li>
+<li><a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel 64 Memory Ordering</a> (Vol 3A, §8.2)</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "search.suggest"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  </body>
+</html>
