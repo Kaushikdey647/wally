@@ -1,6 +1,6 @@
 # Implementation Details
 
-This document explains the internal implementation of Wally's SPSC ring buffer, covering memory layout, algorithms, and design decisions.
+This document explains the internal implementation of Wally's SPSC ring buffer, covering memory layout, algorithms, and design decisions. The reasoning behind each decision is recorded in the [ADRs](adr/0001-ffm-over-unsafe.md).
 
 ## Memory Layout
 

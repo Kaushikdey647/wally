@@ -284,8 +284,8 @@ public final class RingBufferConfig {
 
 **Arena lifecycle**:
 - `Arena.ofAuto()`: Ring memory freed when buffer is GC'd (default)
-- `Arena.ofConfined()`: Explicit cleanup with `arena.close()`
-- `Arena.ofShared()`: Thread-safe cleanup (not needed for SPSC)
+- `Arena.ofShared()`: explicit cleanup with `arena.close()`; close only after both threads have stopped using the ring
+- `Arena.ofConfined()`: **do not use** across threads; a confined segment can only be accessed by its owner thread, so the other side throws `WrongThreadException`
 
 ## Memory Ordering
 
@@ -515,6 +515,24 @@ Wally guarantees `writer.offset()` is always 8-byte aligned.
 - **In-memory only**: No persistence. For durable queues, see Chronicle Queue.
 - **Little-endian**: x86-64, AArch64. No big-endian support.
 - **No transactions**: Messages visible immediately after commit.
+
+## Project Layout and Status
+
+| Module | Contents |
+|---|---|
+| `wally-core` | The library (`io.wally.spsc`): `RingBuffer`, `Writer`, `Reader`, `MessageHandler`, `RingBufferConfig` |
+| `wally-bench` | JMH 1P1C throughput benchmark and the fixed-rate HdrHistogram latency harness; results in `wally-bench/results/` |
+| `wally-stress` | jcstress memory-ordering tests |
+
+Status: version `0.1.0-SNAPSHOT`, not yet published. `./gradlew check` runs the unit tests, the JOL layout test and the Epsilon zero-allocation test, and compiles the jcstress tests; CI runs it on Linux and macOS together with `:wally-bench:jmhClasses`.
+
+## Design Decisions
+
+- [ADR 0001: FFM API instead of Unsafe](docs/adr/0001-ffm-over-unsafe.md)
+- [ADR 0002: Variable-length frames and virtual byte cursors](docs/adr/0002-variable-length-frames.md)
+- [ADR 0003: Claim/commit publication with acquire/release](docs/adr/0003-claim-commit-acquire-release.md)
+- [ADR 0004: Wrap sentinel written only after the gap is proven free](docs/adr/0004-wrap-sentinel-ordering.md)
+- [ADR 0005: Padding against false sharing, off-heap and on-heap](docs/adr/0005-false-sharing-padding.md)
 
 ## License
 

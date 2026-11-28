@@ -45,3 +45,7 @@ nav:
   - Benchmarks: benchmarks.md
   - ADRs:
       - 0001 FFM over Unsafe: adr/0001-ffm-over-unsafe.md
+      - 0002 Variable-length frames: adr/0002-variable-length-frames.md
+      - 0003 Claim/commit and acquire/release: adr/0003-claim-commit-acquire-release.md
+      - 0004 Wrap sentinel ordering: adr/0004-wrap-sentinel-ordering.md
+      - 0005 False-sharing padding: adr/0005-false-sharing-padding.md

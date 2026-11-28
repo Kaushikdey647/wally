@@ -50,7 +50,4 @@ reader.read((buf, off, len, pos) -> {
 | Use it | [Quick start](quickstart.md) |
 | Understand the protocol | [Implementation](implementation.md) |
 | See measured performance | [Benchmarks](benchmarks.md) |
-| See why FFM | [ADR 0001](adr/0001-ffm-over-unsafe.md) |
-
-!!! note "History"
-    Earlier milestones built a durable, mmap-backed multi-producer log. That design is preserved on the `durable-log` branch and the `m2-mmap-log` tag.
+| See the design decisions | [ADRs](adr/0001-ffm-over-unsafe.md) |

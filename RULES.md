@@ -1,14 +1,13 @@
 # Development workflow
 
-## For each milestone or significant task
+## For each significant task
 
 1. **Create a GitHub issue** describing the work.
-   - Title: short summary (e.g., "M1: mmap'd segments, rollover, checksums")
+   - Title: short summary (e.g., "P0: SPSC correctness and 1P1C benchmarks")
    - Body: scope, exit criteria, what's in/out
-   - Label it with the milestone tag if one exists
 
-2. **Create a branch** named after the issue or milestone.
-   - Format: `<milestone>-<short-name>` (e.g., `m1-mmap-segments`)
+2. **Create a branch** named after the issue.
+   - Format: `<priority>-<short-name>` (e.g., `p0-spsc-correctness`)
    - Associate it with the issue in the PR later
 
 3. **Do the work** on that branch.
@@ -45,8 +44,8 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 
 **Examples:**
 
-- `feat(m1): add SegmentFile with mmap and refcounting`
-- `test: add jqwik model test for rollover`
+- `fix: never write wrap sentinel over unread frames`
+- `test: jcstress publication tests for the SPSC ring`
 - `docs: record 1P1C benchmark results`
 
 ## Documentation discipline
@@ -88,15 +87,14 @@ When you write code, update the docs in the same commit or the very next one:
 - **Test realistic workloads**, not synthetic best-cases
   - Multi-threaded benchmarks for concurrent data structures
   - Cold starts AND steady-state
-  - Edge cases: segment boundaries, queue full, etc.
+  - Edge cases: wrap boundary, ring full, mixed message sizes
 - **Measure what matters**
   - Tail latency (p99, p99.9, p99.99), not just averages
   - Use HdrHistogram + fixed-rate drivers to avoid coordinated omission
   - GC pauses, allocation rate, thread contention
 - **Fair comparisons**
-  - Match durability guarantees (flush policies)
-  - Match concurrency models (MPSC vs MPSC, not single-thread)
-  - Document what's different (API maturity, Unsafe vs FFM)
+  - Match concurrency models (1P1C against SPSC queues, never single-threaded)
+  - Document what is different (payload copy vs reference passing, Unsafe vs FFM)
 - **Reproducible**
   - Pin versions, document environment (CPU, OS, JDK)
   - Publish raw data, not just summaries
@@ -104,10 +102,10 @@ When you write code, update the docs in the same commit or the very next one:
 
 **For code:**
 
-- **Validate assumptions** with property tests (jqwik), concurrency tests (jcstress/Lincheck)
-- **Handle edge cases** that will happen in production: segment rollover, stuck producers, disk full
-- **Instrument for debugging**: expose internal state (tail position, flushed position) for troubleshooting
+- **Validate assumptions** with randomized multi-threaded tests, memory-ordering tests (jcstress), layout checks (JOL)
+- **Handle edge cases** that will happen in production: wrap with a full ring, a consumer that stops reading, handlers that throw
+- **Instrument for debugging**: expose internal state (`available()`, `sequence()`) for troubleshooting
 
-**Why:** A half-baked feature shipped is worse than waiting for the complete version. Wally's value proposition (zero-allocation, lock-free, durable) requires proof, not claims. Build to convince a skeptical engineer reviewing your code, not to check off a roadmap item.
+**Why:** A half-baked feature shipped is worse than waiting for the complete version. Wally's value proposition (zero-allocation, lock-free, correct under concurrency) requires proof, not claims. Build to convince a skeptical engineer reviewing your code, not to check off a roadmap item.
 
-**When to compromise:** Pre-alpha/MVP scope cuts are fine IF documented. Mark as "TODO: cross-process IPC (M5)" or "Known limitation: no stuck-producer recovery yet." But within the chosen scope, go deep.
+**When to compromise:** Pre-alpha/MVP scope cuts are fine IF documented. Mark as "Known limitation: SPSC only" or "TODO: batched head publication". But within the chosen scope, go deep.
