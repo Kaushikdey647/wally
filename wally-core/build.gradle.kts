@@ -6,10 +6,13 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("org.openjdk.jol:jol-core:0.17")
 }
 
 tasks.test {
     useJUnitPlatform { excludeTags("epsilon") }
+    // JOL otherwise forks a Serviceability Agent attach to this JVM, which can block on CI runners.
+    systemProperty("jol.skipHotspotSAAttach", "true")
 }
 
 // Steady-state loop under Epsilon GC: any per-op allocation exhausts the small heap and fails the run.
@@ -24,8 +27,3 @@ val epsilonTest = tasks.register<Test>("epsilonTest") {
 }
 
 tasks.check { dependsOn(epsilonTest) }
-
-// Temporarily exclude reopen test - tail recovery not implemented yet (M1 known limitation)
-tasks.test {
-    exclude("**/WallyIntegrationTest\$*reopensLogAndContinuesReading*")
-}

@@ -4,4 +4,4 @@ plugins {
 
 rootProject.name = "wally"
 
-include("wally-core", "wally-bench")
+include("wally-core", "wally-bench", "wally-stress")

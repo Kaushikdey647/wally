@@ -10,14 +10,6 @@ public final class Align {
         return (value + alignment - 1) & -alignment;
     }
 
-    public static long align(long value, int alignment) {
-        return (value + alignment - 1) & -alignment;
-    }
-
-    public static boolean isAligned(long value, int alignment) {
-        return (value & (alignment - 1)) == 0;
-    }
-
     public static boolean isPowerOfTwo(long value) {
         return value > 0 && (value & (value - 1)) == 0;
     }

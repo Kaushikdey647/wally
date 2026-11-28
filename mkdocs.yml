@@ -1,5 +1,5 @@
 site_name: Wally
-site_description: High-throughput, zero-allocation off-heap hybrid WAL & event queue for Java
+site_description: Lock-free, zero-allocation off-heap SPSC ring buffer for Java
 repo_url: https://github.com/kaushikdey647/wally
 edit_uri: edit/main/docs/
 
@@ -40,19 +40,12 @@ validation:
 
 nav:
   - Home: index.md
-  - Start here:
-      - How Wally works: how-it-works.md
-      - Glossary: glossary.md
-  - Concepts: concepts.md
-  - Record layout: record-layout.md
-  - Design:
-      - Blueprint: design/blueprint.md
-      - File format: format.md
-      - Guarantees: guarantees.md
-  - Roadmap: roadmap.md
+  - Quick start: quickstart.md
+  - Implementation: implementation.md
   - Benchmarks: benchmarks.md
   - ADRs:
       - 0001 FFM over Unsafe: adr/0001-ffm-over-unsafe.md
-      - 0002 Position addressing: adr/0002-position-addressing.md
-      - 0003 Claim/commit protocol: adr/0003-claim-commit-protocol.md
-      - 0004 Fetch-add tail: adr/0004-fetch-add-tail.md
+      - 0002 Variable-length frames: adr/0002-variable-length-frames.md
+      - 0003 Claim/commit and acquire/release: adr/0003-claim-commit-acquire-release.md
+      - 0004 Wrap sentinel ordering: adr/0004-wrap-sentinel-ordering.md
+      - 0005 False-sharing padding: adr/0005-false-sharing-padding.md

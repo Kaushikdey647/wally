@@ -1,3 +1,3 @@
 module io.wally.core {
-    exports io.wally.api;
+    exports io.wally.spsc;
 }
