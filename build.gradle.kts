@@ -10,6 +10,7 @@ subprojects {
         }
         tasks.withType<JavaCompile>().configureEach {
             options.encoding = "UTF-8"
+            options.release = 22
             options.compilerArgs.add("-Xlint:all,-processing")
         }
         tasks.named<JavaCompile>("compileJava") { options.compilerArgs.add("-Werror") }
