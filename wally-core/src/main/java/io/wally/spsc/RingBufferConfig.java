@@ -10,7 +10,6 @@ import java.lang.foreign.Arena;
 public final class RingBufferConfig {
 
     private int capacity = 1024 * 1024;  // 1 MB default
-    private int alignment = 64;           // cache-line alignment
     private Arena arena = Arena.ofAuto();
 
     public RingBufferConfig() {
@@ -27,14 +26,6 @@ public final class RingBufferConfig {
         return this;
     }
 
-    public RingBufferConfig alignment(int bytes) {
-        if (!Align.isPowerOfTwo(bytes)) {
-            throw new IllegalArgumentException("alignment must be a power of two");
-        }
-        this.alignment = bytes;
-        return this;
-    }
-
     public RingBufferConfig arena(Arena arena) {
         if (arena == null) {
             throw new NullPointerException("arena must not be null");
@@ -45,10 +36,6 @@ public final class RingBufferConfig {
 
     public int capacity() {
         return capacity;
-    }
-
-    public int alignment() {
-        return alignment;
     }
 
     public Arena arena() {

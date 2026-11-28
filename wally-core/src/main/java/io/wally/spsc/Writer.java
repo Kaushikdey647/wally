@@ -24,12 +24,12 @@ public interface Writer {
     boolean tryClaim(int length);
 
     /**
-     * @return the ring buffer memory
+     * @return the ring's data region (excludes the cursors)
      */
     MemorySegment buffer();
 
     /**
-     * @return byte offset where the claimed message should be written
+     * @return byte offset within {@link #buffer()} where the claimed payload should be written
      */
     long offset();
 

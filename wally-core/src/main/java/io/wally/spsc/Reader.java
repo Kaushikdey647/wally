@@ -20,12 +20,14 @@ public interface Reader {
     int read(MessageHandler handler, int limit);
 
     /**
-     * @return number of messages available to read
+     * @return committed bytes not yet consumed, including frame headers, padding and wrap gaps
+     *         (not a message count)
      */
     long available();
 
     /**
-     * @return monotonic sequence number of the next message that will be read
+     * @return byte position of the next frame to read; monotonic, but not contiguous across
+     *         messages (it advances by frame size and skips wrap gaps)
      */
     long sequence();
 }

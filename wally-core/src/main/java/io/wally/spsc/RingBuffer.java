@@ -1,9 +1,12 @@
 package io.wally.spsc;
 
+import io.wally.internal.memory.Align;
 import io.wally.internal.memory.Mem;
 import io.wally.spsc.internal.Cursors;
 
 import java.lang.foreign.MemorySegment;
+
+import static java.lang.foreign.ValueLayout.JAVA_INT;
 
 /**
  * Lock-free SPSC (Single Producer Single Consumer) circular buffer.
@@ -11,7 +14,7 @@ import java.lang.foreign.MemorySegment;
  * <p>Features:
  * <ul>
  *   <li>Zero allocation after warmup
- *   <li>Cache-line padded cursors to prevent false sharing
+ *   <li>Cache-line padded cursors (off-heap) and writer/reader state (on-heap) to prevent false sharing
  *   <li>Acquire/release memory ordering for correctness
  *   <li>Power-of-two capacity for fast modulo via masking
  * </ul>
@@ -23,8 +26,8 @@ import java.lang.foreign.MemorySegment;
  *   <li>Different threads must not share Writer/Reader instances
  * </ul>
  *
- * <p>Message format: [4-byte length][payload bytes]
- * <br>Total space per message: length + 4 bytes
+ * <p>Frame format: [4-byte length][4-byte pad][payload], padded to a multiple of 8 bytes.
+ * A length of 0 is a wrap sentinel: the rest of the lap is unused and the next frame starts at index 0.
  *
  * <p><b>Example:</b>
  * <pre>{@code
@@ -39,7 +42,7 @@ import java.lang.foreign.MemorySegment;
  * }
  *
  * // Consumer thread
- * r.read((buf, off, len, seq) -> {
+ * r.read((buf, off, len, pos) -> {
  *     long value = buf.get(ValueLayout.JAVA_LONG, off);
  * }, 100);
  * }</pre>
@@ -50,11 +53,11 @@ public final class RingBuffer {
     private static final int ALIGNMENT = 8;    // All frames aligned to 8 bytes
 
     private final MemorySegment memory;
+    private final MemorySegment data;
     private final int capacity;
     private final int mask;
     private final long headOffset;
     private final long tailOffset;
-    private final long dataOffset;
 
     private final WriterImpl writer = new WriterImpl();
     private final ReaderImpl reader = new ReaderImpl();
@@ -63,11 +66,10 @@ public final class RingBuffer {
         this.capacity = config.capacity();
         this.mask = config.mask();
         this.memory = Cursors.allocate(capacity, config.arena());
+        this.data = memory.asSlice(Cursors.dataOffset(), capacity);
         this.headOffset = Cursors.headOffset();
         this.tailOffset = Cursors.tailOffset();
-        this.dataOffset = Cursors.dataOffset();
 
-        // Initialize cursors to 0
         Mem.setLongRelease(memory, headOffset, 0L);
         Mem.setLongRelease(memory, tailOffset, 0L);
     }
@@ -87,105 +89,110 @@ public final class RingBuffer {
         return capacity;
     }
 
-    private final class WriterImpl implements Writer {
+    // Inheritance-based padding: HotSpot lays out superclass fields first, so the hot fields sit
+    // between two 128-byte pads and can't share a cache line with a neighbouring object.
+    abstract static class Pad128 {
+        long p00, p01, p02, p03, p04, p05, p06, p07, p08, p09, p10, p11, p12, p13, p14, p15;
+    }
 
-        private long claimedTail;
-        private int claimedLength;
-        private long cachedHead;
+    abstract static class WriterFields extends Pad128 {
+        long tail;
+        long claimedTail;
+        long claimedNextTail;
+        long cachedHead;
+    }
+
+    abstract static class ReaderFields extends Pad128 {
+        long head;
+        long cachedTail;
+    }
+
+    private final class WriterImpl extends WriterFields implements Writer {
+        long q00, q01, q02, q03, q04, q05, q06, q07, q08, q09, q10, q11, q12, q13, q14, q15;
 
         @Override
         public boolean tryClaim(int length) {
             if (length <= 0) {
                 throw new IllegalArgumentException("length must be positive, was: " + length);
             }
-
-            // Check overflow before alignment calculation
             if (length > Integer.MAX_VALUE - HEADER_SIZE - ALIGNMENT) {
                 throw new MessageTooLargeException(length, capacity,
                     "length would overflow frame size calculation");
             }
 
-            // Frame = header (8 bytes: length + padding) + payload, aligned to 8 bytes
-            int frameSize = HEADER_SIZE + io.wally.internal.memory.Align.align(length, ALIGNMENT);
-
+            int frameSize = HEADER_SIZE + Align.align(length, ALIGNMENT);
             if (frameSize > capacity) {
                 throw new MessageTooLargeException(length, capacity,
                     "frame size " + frameSize + " exceeds capacity");
             }
 
-            long tail = Mem.getLongAcquire(memory, tailOffset);
+            long tail = this.tail;
             int tailIndex = (int) (tail & mask);
 
-            // Check if we need to wrap
             if (tailIndex + frameSize > capacity) {
-                // Message would cross ring boundary — write sentinel and wrap
-                long sentinelPos = dataOffset + tailIndex;
-                memory.set(java.lang.foreign.ValueLayout.JAVA_INT, sentinelPos, 0);
-
-                // Start from beginning of next lap
-                tail = (tail & ~mask) + capacity;
-                tailIndex = 0;
-            }
-
-            // Check space available
-            long head = cachedHead;
-            long requiredSpace = tail + frameSize;
-
-            if (requiredSpace - head > capacity) {
-                // Refresh cached head
-                head = Mem.getLongAcquire(memory, headOffset);
-                cachedHead = head;
-
-                if (requiredSpace - head > capacity) {
-                    return false;  // Still full
+                // The sentinel may only be written once the gap [tail, nextLap) is known to be free,
+                // otherwise it can overwrite the header of an unread frame. The skip is published on
+                // its own so a frame larger than both tailIndex and the gap can still be placed later.
+                long nextLap = (tail & ~mask) + capacity;
+                if (!hasSpace(nextLap)) {
+                    return false;
                 }
+                data.set(JAVA_INT, tailIndex, 0);
+                this.tail = tail = nextLap;
+                tailIndex = 0;
+                Mem.setLongRelease(memory, tailOffset, tail);
             }
 
-            // Claim succeeded
-            this.claimedTail = tail;
-            this.claimedLength = length;  // Store actual user length
+            long newTail = tail + frameSize;
+            if (!hasSpace(newTail)) {
+                return false;
+            }
+            data.set(JAVA_INT, tailIndex, length);
 
-            // Write length field at frame start
-            long framePos = dataOffset + tailIndex;
-            memory.set(java.lang.foreign.ValueLayout.JAVA_INT, framePos, length);
-
+            claimedTail = tail;
+            claimedNextTail = newTail;
             return true;
+        }
+
+        private boolean hasSpace(long newTail) {
+            if (newTail - cachedHead <= capacity) {
+                return true;
+            }
+            cachedHead = Mem.getLongAcquire(memory, headOffset);
+            return newTail - cachedHead <= capacity;
         }
 
         @Override
         public MemorySegment buffer() {
-            return memory;
+            return data;
         }
 
         @Override
         public long offset() {
-            int index = (int) (claimedTail & mask);
-            return dataOffset + index + HEADER_SIZE;
+            return (claimedTail & mask) + HEADER_SIZE;
         }
 
         @Override
         public int length() {
-            return claimedLength;
+            return data.get(JAVA_INT, claimedTail & mask);
         }
 
         @Override
         public void commit() {
-            int frameSize = HEADER_SIZE + io.wally.internal.memory.Align.align(claimedLength, ALIGNMENT);
-            long newTail = claimedTail + frameSize;
-            Mem.setLongRelease(memory, tailOffset, newTail);
+            tail = claimedNextTail;
+            Mem.setLongRelease(memory, tailOffset, tail);
         }
 
         @Override
         public boolean write(byte[] src, int srcPos, int length) {
-            // Validate inputs
             if (src == null) {
                 throw new NullPointerException("src array must not be null");
             }
             if (srcPos < 0) {
                 throw new IllegalArgumentException("srcPos must be non-negative, was: " + srcPos);
             }
-            if (length < 0) {
-                throw new IllegalArgumentException("length must be non-negative, was: " + length);
+            if (length <= 0) {
+                throw new IllegalArgumentException("length must be positive, was: " + length);
             }
             if (srcPos + length > src.length) {
                 throw new IllegalArgumentException(
@@ -196,22 +203,21 @@ public final class RingBuffer {
             if (!tryClaim(length)) {
                 return false;
             }
-            MemorySegment.copy(MemorySegment.ofArray(src), srcPos, memory, offset(), length);
+            MemorySegment.copy(MemorySegment.ofArray(src), srcPos, data, offset(), length);
             commit();
             return true;
         }
 
         @Override
         public boolean write(MemorySegment src, long srcOffset, int length) {
-            // Validate inputs
             if (src == null) {
                 throw new NullPointerException("src segment must not be null");
             }
             if (srcOffset < 0) {
                 throw new IllegalArgumentException("srcOffset must be non-negative, was: " + srcOffset);
             }
-            if (length < 0) {
-                throw new IllegalArgumentException("length must be non-negative, was: " + length);
+            if (length <= 0) {
+                throw new IllegalArgumentException("length must be positive, was: " + length);
             }
             if (srcOffset + length > src.byteSize()) {
                 throw new IllegalArgumentException(
@@ -222,16 +228,14 @@ public final class RingBuffer {
             if (!tryClaim(length)) {
                 return false;
             }
-            MemorySegment.copy(src, srcOffset, memory, offset(), length);
+            MemorySegment.copy(src, srcOffset, data, offset(), length);
             commit();
             return true;
         }
     }
 
-    private final class ReaderImpl implements Reader {
-
-        private long head;
-        private long cachedTail;
+    private final class ReaderImpl extends ReaderFields implements Reader {
+        long q00, q01, q02, q03, q04, q05, q06, q07, q08, q09, q10, q11, q12, q13, q14, q15;
 
         @Override
         public int read(MessageHandler handler, int limit) {
@@ -244,45 +248,34 @@ public final class RingBuffer {
 
             int count = 0;
             long currentHead = head;
+            long tail = cachedTail;
 
             try {
                 while (count < limit) {
-                    long tail = Mem.getLongAcquire(memory, tailOffset);
-
                     if (currentHead >= tail) {
-                        // No more messages
+                        tail = Mem.getLongAcquire(memory, tailOffset);
                         cachedTail = tail;
-                        break;
+                        if (currentHead >= tail) {
+                            break;
+                        }
                     }
 
                     int headIndex = (int) (currentHead & mask);
-                    long framePos = dataOffset + headIndex;
-
-                    // Read length field
-                    int length = memory.get(java.lang.foreign.ValueLayout.JAVA_INT, framePos);
+                    int length = data.get(JAVA_INT, headIndex);
 
                     if (length == 0) {
-                        // Wrap sentinel — jump to start of next lap
                         currentHead = (currentHead & ~mask) + capacity;
                         continue;
                     }
 
-                    // Calculate next frame position
-                    int frameSize = HEADER_SIZE + io.wally.internal.memory.Align.align(length, ALIGNMENT);
+                    // Advance before the callback so a throwing handler still consumes the frame
+                    long position = currentHead;
+                    currentHead += HEADER_SIZE + Align.align(length, ALIGNMENT);
 
-                    // Advance currentHead BEFORE handler call
-                    // This ensures the finally block saves the advanced position even if handler throws
-                    long messageSequence = currentHead;
-                    currentHead += frameSize;
-
-                    // Deliver message (use messageSequence which is the position of THIS message)
-                    long payloadOffset = framePos + HEADER_SIZE;
-                    handler.onMessage(memory, payloadOffset, length, messageSequence);
-
+                    handler.onMessage(data, headIndex + HEADER_SIZE, length, position);
                     count++;
                 }
             } finally {
-                // Update head even if handler threw
                 head = currentHead;
                 Mem.setLongRelease(memory, headOffset, currentHead);
             }
@@ -292,8 +285,7 @@ public final class RingBuffer {
 
         @Override
         public long available() {
-            long tail = Mem.getLongAcquire(memory, tailOffset);
-            return tail - head;
+            return Mem.getLongAcquire(memory, tailOffset) - head;
         }
 
         @Override

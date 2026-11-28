@@ -56,6 +56,20 @@ class EdgeCaseTest {
 
     @ParameterizedTest
     @ValueSource(ints = {-1, 0})
+    void writeInvalidLength(int length) {
+        RingBuffer ring = new RingBuffer(new RingBufferConfig().capacity(1024));
+        Writer writer = ring.writer();
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            () -> writer.write(new byte[4], 0, length));
+        assertTrue(ex.getMessage().contains("positive"));
+        ex = assertThrows(IllegalArgumentException.class,
+            () -> writer.write(MemorySegment.ofArray(new byte[4]), 0, length));
+        assertTrue(ex.getMessage().contains("positive"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {-1, 0})
     void readInvalidLimit(int limit) {
         RingBuffer ring = new RingBuffer(new RingBufferConfig().capacity(1024));
         Reader reader = ring.reader();
